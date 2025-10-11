@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.yaml:/app/config.yaml
+      - /path/to/models # Make sure to update this
+    networks:
+      - llm-network
+    devices:
+      - /dev/dri
+      - /dev/kfd
+    security_opt:
+      - seccomp:unconfined
+
+networks:
+  llm-network:
+    name: llm-network
