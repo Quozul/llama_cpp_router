@@ -76,6 +76,7 @@ pub struct ModelParams {
     top_k: i32,
     top_p: f32,
     min_p: f32,
+    repetition_penalty: f32,
     cache_type_k: CacheQuantType,
     cache_type_v: CacheQuantType,
     flash_attention: bool,
@@ -90,6 +91,7 @@ impl Default for ModelParams {
             top_k: 40,
             top_p: 0.9,
             min_p: 0.1,
+            repetition_penalty: 1.0,
             cache_type_k: CacheQuantType::default(),
             cache_type_v: CacheQuantType::default(),
             flash_attention: false,
@@ -133,6 +135,10 @@ impl ModelParams {
 
     pub fn jinja(&self) -> bool {
         self.jinja
+    }
+
+    pub fn repetition_penalty(&self) -> f32 {
+        self.repetition_penalty
     }
 }
 

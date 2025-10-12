@@ -53,6 +53,7 @@ impl DockerRepository {
         let top_k = model_params.top_k().to_string();
         let top_p = model_params.top_p().to_string();
         let min_p = model_params.min_p().to_string();
+        let repetition_penalty = model_params.repetition_penalty().to_string();
         let container_model_path = model.config.container_model_path();
 
         let fixed_args = [
@@ -65,6 +66,7 @@ impl DockerRepository {
             ("--top-k", top_k.as_str()),
             ("--top-p", top_p.as_str()),
             ("--min-p", min_p.as_str()),
+            ("--repeat-penalty", repetition_penalty.as_str()),
             ("--cache-type-k", &model_params.cache_type_k().to_string()),
             ("--cache-type-v", &model_params.cache_type_v().to_string()),
             ("--flash-attn", flash_attn),
