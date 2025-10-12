@@ -145,6 +145,7 @@ impl ModelParams {
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct ModelConfig {
     file: String,
+    mmproj: Option<String>,
     params: ModelParams,
     draft: Option<DraftModelConfig>,
 }
@@ -152,6 +153,12 @@ pub struct ModelConfig {
 impl ModelConfig {
     pub fn container_model_path(&self) -> String {
         format!("/models/{}", self.file)
+    }
+
+    pub fn mmproj(&self) -> Option<String> {
+        self.mmproj
+            .as_ref()
+            .map(|mmproj| format!("/models/{}", mmproj))
     }
 
     pub fn params(&self) -> &ModelParams {
@@ -197,6 +204,7 @@ impl Default for Config {
                     cache_type_v: CacheQuantType::Q8_0,
                     ..Default::default()
                 },
+                mmproj: None,
                 draft: Some(DraftModelConfig {
                     file: "llama-3.1-8b-instruct-Q4_K_M.gguf".to_string(),
                     cache_type_k: CacheQuantType::Q4_0,

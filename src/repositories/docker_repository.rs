@@ -2,7 +2,7 @@ use crate::config::config::Config;
 use crate::model::Model;
 use bollard::models::{
     ContainerCreateBody, DeviceMapping, EndpointSettings, HealthStatusEnum, HostConfig, Mount,
-    MountTypeEnum, NetworkingConfig, PortBinding, PortMap, RestartPolicy, RestartPolicyNameEnum,
+    MountTypeEnum, NetworkingConfig, RestartPolicy, RestartPolicyNameEnum,
 };
 use bollard::query_parameters::{
     CreateContainerOptionsBuilder, InspectContainerOptionsBuilder, StartContainerOptionsBuilder,
@@ -83,6 +83,11 @@ impl DockerRepository {
 
         if model_params.jinja() {
             cmd.push("--jinja".to_string());
+        }
+
+        if let Some(mmproj) = model.config.mmproj() {
+            cmd.push("--mmproj".to_string());
+            cmd.push(mmproj);
         }
 
         if let Some(draft) = model.config.draft() {
