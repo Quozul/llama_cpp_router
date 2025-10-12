@@ -16,6 +16,11 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_stream::{StreamExt, wrappers::ReceiverStream};
 
+#[derive(Serialize)]
+struct ErrorResponse {
+    message: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct ChatCompletionRequest {
     model: String,
@@ -27,11 +32,6 @@ pub struct ChatCompletionRequest {
 pub struct Message {
     role: String,
     content: String,
-}
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    message: String,
 }
 
 pub async fn post_chat_completions(
