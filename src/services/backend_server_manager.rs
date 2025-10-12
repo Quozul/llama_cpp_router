@@ -2,7 +2,6 @@ use crate::config::config::Config;
 use crate::model::Model;
 use crate::repositories::docker_repository::DockerRepository;
 use crate::services::backend_server::BackendServer;
-use axum::Json;
 use bollard::errors::Error as DockerError;
 use serde_json::Value;
 use std::collections::HashMap;

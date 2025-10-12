@@ -1,8 +1,8 @@
 use crate::config::config::Config;
 use crate::model::Model;
 use bollard::models::{
-    ContainerCreateBody, DeviceMapping, EndpointSettings, HealthConfig, HealthStatusEnum,
-    HostConfig, Mount, MountTypeEnum, NetworkingConfig, RestartPolicy, RestartPolicyNameEnum,
+    ContainerCreateBody, DeviceMapping, EndpointSettings, HealthStatusEnum, HostConfig, Mount,
+    MountTypeEnum, NetworkingConfig, RestartPolicy, RestartPolicyNameEnum,
 };
 use bollard::query_parameters::{
     CreateContainerOptionsBuilder, InspectContainerOptionsBuilder, StartContainerOptionsBuilder,
@@ -10,7 +10,6 @@ use bollard::query_parameters::{
 };
 use bollard::{Docker, errors::Error as DockerError};
 use std::collections::HashMap;
-use std::time::Duration;
 use thiserror::Error;
 use tracing::info;
 

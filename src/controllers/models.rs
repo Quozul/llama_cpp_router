@@ -1,5 +1,6 @@
 use crate::services::backend_server_manager::BackendServerManagerState;
 use axum::Json;
+use axum::extract::State;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -31,7 +32,7 @@ impl Model {
 }
 
 pub async fn get_models(
-    backend_server_manager: BackendServerManagerState,
+    State(backend_server_manager): State<BackendServerManagerState>,
 ) -> Json<ModelListResponse> {
     let manager = backend_server_manager.lock().await;
     let models = manager

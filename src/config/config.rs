@@ -270,22 +270,31 @@ impl Config {
             .collect()
     }
 
-    pub fn get_host_model_path(&self, model_config: &ModelConfig) -> String {
-        format!("{}/{}", self.docker.volume_mount, model_config.file)
+    fn get_host_model_path(&self, file_name: &str) -> String {
+        format!("{}/{}", self.docker.volume_mount, file_name)
     }
 
     fn get_model_from_config(&self, model_name: &str, model_config: &ModelConfig) -> Model {
         let container_name = format!("llm_{}", model_name);
-        let host_model_path = self.get_host_model_path(model_config);
-        let estimated_memory_usage = estimate_memory(
-            host_model_path,
-            model_config.params.context.size() as usize,
-            KvQuant::Int8,
-        )
-        .ok()
-        .flatten()
-        .map(|est| est.total_required_mb)
-        .unwrap_or(u64::MAX);
+        let ctx_size = model_config.params.context.size() as usize;
+        let draft_estimated_memory_usage = model_config
+            .draft()
+            .and_then(|draft| {
+                let host_draft_model_path = self.get_host_model_path(&draft.file);
+                estimate_memory(host_draft_model_path, ctx_size, KvQuant::Q4)
+                    .ok()
+                    .flatten()
+                    .map(|est| est.total_required_mb)
+            })
+            .unwrap_or(0);
+
+        let host_model_path = self.get_host_model_path(&model_config.file);
+        let estimated_memory_usage = estimate_memory(host_model_path, ctx_size, KvQuant::Int8)
+            .ok()
+            .flatten()
+            .map(|est| est.total_required_mb)
+            .unwrap_or(u64::MAX)
+            + draft_estimated_memory_usage;
         info!("Estimated memory usage: {}", estimated_memory_usage);
         Model {
             config: model_config.clone(),
