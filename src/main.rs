@@ -34,10 +34,9 @@ async fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         return Ok(ExitCode::FAILURE);
     };
     let docker_repository = DockerRepository::new(config.clone())?;
-    let state: BackendServerManagerState = Arc::new(Mutex::new(BackendServerManager::new(
-        docker_repository,
-        config,
-    )));
+    let state: BackendServerManagerState = Arc::new(Mutex::new(
+        BackendServerManager::new(docker_repository, config).await,
+    ));
 
     let open_ai_router = Router::new()
         .route("/chat/completions", post(post_chat_completions))

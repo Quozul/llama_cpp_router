@@ -285,28 +285,35 @@ impl Config {
         let ctx_size = model_config.params.context.size() as usize;
         let draft_estimated_memory_usage = model_config
             .draft()
-            .and_then(|draft| {
+            .map(|draft| {
                 let host_draft_model_path = self.get_host_model_path(&draft.file);
-                estimate_memory(host_draft_model_path, ctx_size, KvQuant::Q4)
-                    .ok()
-                    .flatten()
-                    .map(|est| est.total_required_mb)
+                safe_estimate(host_draft_model_path, ctx_size, KvQuant::Q4)
             })
             .unwrap_or(0);
 
         let host_model_path = self.get_host_model_path(&model_config.file);
-        let estimated_memory_usage = estimate_memory(host_model_path, ctx_size, KvQuant::Int8)
-            .ok()
-            .flatten()
-            .map(|est| est.total_required_mb)
-            .unwrap_or(u64::MAX)
-            + draft_estimated_memory_usage;
-        info!("Estimated memory usage: {}", estimated_memory_usage);
+        let estimated_memory_usage = safe_estimate(host_model_path, ctx_size, KvQuant::Int8);
+        let total_memory_usage = estimated_memory_usage + draft_estimated_memory_usage;
+        info!("Total estimated memory usage: {}", total_memory_usage);
         Model {
             config: model_config.clone(),
             model_name: model_name.to_string(),
             container_name,
-            estimated_memory_usage,
+            estimated_memory_usage: total_memory_usage,
+        }
+    }
+}
+
+fn safe_estimate<P: AsRef<Path>>(path: P, context_tokens: usize, kv_quant: KvQuant) -> u64 {
+    match estimate_memory(path, context_tokens, kv_quant) {
+        Ok(Some(est)) => est.total_required_mb,
+        Ok(None) => {
+            error!("No estimation for model");
+            u64::MAX
+        }
+        Err(err) => {
+            error!("Failed to estimate memory usage of model: {err}");
+            u64::MAX
         }
     }
 }

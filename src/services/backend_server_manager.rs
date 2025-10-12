@@ -1,22 +1,20 @@
 use crate::config::config::Config;
 use crate::model::Model;
 use crate::repositories::docker_repository::DockerRepository;
+use crate::repositories::vram_repository::VramRepository;
 use crate::services::backend_server::BackendServer;
 use bollard::errors::Error as DockerError;
-use serde_json::Value;
 use std::collections::HashMap;
-use std::ops::Div;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use thiserror::Error;
-use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tracing::{error, info};
 
 pub struct BackendServerManager {
     docker_repository: DockerRepository,
+    vram_repository: VramRepository,
     config: Config,
     last_used: HashMap<String, SystemTime>,
 }
@@ -34,12 +32,17 @@ pub enum EstimateError {
 pub type BackendServerManagerState = Arc<Mutex<BackendServerManager>>;
 
 impl BackendServerManager {
-    pub fn new(docker_repository: DockerRepository, config: Config) -> Self {
-        Self {
+    pub async fn new(docker_repository: DockerRepository, config: Config) -> Self {
+        let manager = Self {
             docker_repository,
-            config,
+            vram_repository: VramRepository::new(),
+            config: config.clone(),
             last_used: HashMap::new(),
+        };
+        for model in config.get_all_models() {
+            manager.model_fits_total_memory(&model).await;
         }
+        manager
     }
 
     pub fn get_all_models(&self) -> Vec<Model> {
@@ -81,15 +84,22 @@ impl BackendServerManager {
         Ok(backend_server)
     }
 
-    /// Returns true if the model fits in memory
-    async fn model_fits(&self, requested_model: &Model) -> Result<bool, EstimateError> {
+    async fn model_fits_free_memory(&self, requested_model: &Model) -> bool {
         let required = requested_model.estimated_memory_usage;
-        let free = self.get_available_memory().await;
-        let fits = required <= free;
+        let free = self.vram_repository.get_free_memory().await;
+        required <= free
+    }
+
+    async fn model_fits_total_memory(&self, requested_model: &Model) {
+        let required = requested_model.estimated_memory_usage;
+        let total = self.vram_repository.get_total_memory().await;
+        let fits = required <= total;
         if !fits {
-            info!(?required, ?free);
+            error!(
+                "Model {} may not fit in memory, requires {} MB of memory while only up to {} MB available",
+                requested_model.model_name, required, total
+            );
         }
-        Ok(fits)
     }
 
     async fn unload_models_to_fit_if_necessary(
@@ -97,7 +107,7 @@ impl BackendServerManager {
         requested_model: &Model,
     ) -> Result<(), EstimateError> {
         // Fast‑path: if it already fits we are done.
-        if self.model_fits(requested_model).await? {
+        if self.model_fits_free_memory(requested_model).await {
             return Ok(());
         }
 
@@ -137,7 +147,7 @@ impl BackendServerManager {
                 .await?;
 
             // Check if we now have enough space
-            if self.model_fits(requested_model).await? {
+            if self.model_fits_free_memory(requested_model).await {
                 info!("Successfully freed enough memory for the requested model");
                 return Ok(());
             }
@@ -151,58 +161,5 @@ impl BackendServerManager {
         Err(EstimateError::FreeFailed(
             requested_model.model_name.clone(),
         ))
-    }
-
-    /// Runs `rocm-smi` to get the amount of VRAM available
-    pub async fn get_available_memory(&self) -> u64 {
-        // Execute the CLI tool.
-        let output = Command::new("rocm-smi")
-            .arg("--showmeminfo")
-            .arg("vram")
-            .arg("--json")
-            .output()
-            .await
-            .expect("failed to execute rocm-smi");
-
-        if !output.status.success() {
-            // If the tool failed we treat it as no free memory (conservative).
-            error!("rocm-smi returned a non‑zero exit code");
-            return 0;
-        }
-
-        // Parse the JSON payload.
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let v: Value = match serde_json::from_str(&stdout) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Failed to parse rocm‑smi JSON output: {}", e);
-                return 0;
-            }
-        };
-
-        // The JSON has a top‑level key like "card0". Grab the first object.
-        let card = match v.as_object().and_then(|obj| obj.values().next()) {
-            Some(c) => c,
-            None => {
-                error!("Unexpected rocm‑smi JSON structure");
-                return 0;
-            }
-        };
-
-        // Extract the two fields we need.
-        let total_str = card
-            .get("VRAM Total Memory (B)")
-            .and_then(|v| v.as_str())
-            .unwrap_or("0");
-        let used_str = card
-            .get("VRAM Total Used Memory (B)")
-            .and_then(|v| v.as_str())
-            .unwrap_or("0");
-
-        let total = u64::from_str(total_str).unwrap_or(0);
-        let used = u64::from_str(used_str).unwrap_or(0);
-
-        // Free memory = total - used (but never negative).
-        total.saturating_sub(used).div(1_000_000) // TODO: would be cool to have the same unit everywhere
     }
 }
