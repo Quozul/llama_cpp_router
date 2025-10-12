@@ -1,4 +1,4 @@
-use crate::event_source::{ClientEvent, EventSource, EventSourceError};
+use crate::event_source::{ClientEvent, EventSource};
 use crate::services::backend_server_manager::BackendServerManagerState;
 use axum::response::Response;
 use axum::{

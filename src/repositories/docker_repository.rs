@@ -97,15 +97,6 @@ impl DockerRepository {
         let mut exposed_ports: HashMap<String, HashMap<(), ()>> = HashMap::new();
         exposed_ports.insert(format!("{port}/tcp"), HashMap::new());
 
-        let mut port_map = PortMap::new();
-        port_map.insert(
-            format!("{port}/tcp"),
-            Some(vec![PortBinding {
-                host_port: Some("8080".to_string()),
-                host_ip: Some("0.0.0.0".to_string()),
-            }]),
-        );
-
         let host_config = HostConfig {
             restart_policy: Some(RestartPolicy {
                 name: Some(RestartPolicyNameEnum::NO),
@@ -131,7 +122,6 @@ impl DockerRepository {
                 target: Some("/models".to_string()),
                 ..Default::default()
             }]),
-            port_bindings: Some(port_map),
             ..Default::default()
         };
 
