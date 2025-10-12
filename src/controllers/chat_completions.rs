@@ -1,22 +1,15 @@
 use crate::event_source::{ClientEvent, EventSource};
 use crate::services::backend_server_manager::BackendServerManagerState;
-use axum::response::Response;
-use axum::{
-    Json,
-    extract::State,
-    http::StatusCode,
-    response::{
-        IntoResponse,
-        sse::{self, Event, Sse},
-    },
-};
+use axum::response::sse::{self, Event, Sse};
+use axum::response::{IntoResponse, Response};
+use axum::{Json, extract::State, http::StatusCode};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_stream::{StreamExt, wrappers::ReceiverStream};
-use tracing::{debug, error, info};
+use tracing::error;
 
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -27,15 +20,6 @@ struct ErrorResponse {
 pub struct ChatCompletionRequest {
     model: String,
     stream: Option<bool>,
-    messages: Vec<Message>,
-    #[serde(flatten)]
-    other: Map<String, Value>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Message {
-    role: String,
-    content: String,
     #[serde(flatten)]
     other: Map<String, Value>,
 }
@@ -151,7 +135,7 @@ async fn non_streaming(
     match client.post(&backend_url).json(&payload).send().await {
         Ok(resp) => {
             let status = resp.status();
-            match resp.json::<serde_json::Value>().await {
+            match resp.json::<Value>().await {
                 Ok(json) => (status, Json(json).into_response()),
                 Err(err) => (
                     StatusCode::BAD_GATEWAY,
