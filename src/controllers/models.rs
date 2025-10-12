@@ -1,3 +1,4 @@
+use crate::services::backend_server_manager::BackendServerManagerState;
 use axum::Json;
 use serde::Serialize;
 
@@ -16,30 +17,28 @@ pub struct Model {
 }
 
 impl Model {
-    fn new(id: String, owned_by: String) -> Self {
+    fn new(id: impl ToString, owned_by: impl ToString) -> Self {
         Self {
-            id,
+            id: id.to_string(),
             object: "model".to_string(),
             created: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            owned_by,
+            owned_by: owned_by.to_string(),
         }
     }
 }
 
-pub async fn get_models() -> Json<ModelListResponse> {
-    let models = vec![
-        Model::new("gpt-3.5-turbo".to_string(), "openai".to_string()),
-        Model::new("gpt-3.5-turbo-16k".to_string(), "openai".to_string()),
-        Model::new("gpt-4".to_string(), "openai".to_string()),
-        Model::new("text-davinci-003".to_string(), "openai".to_string()),
-        Model::new("text-davinci-002".to_string(), "openai".to_string()),
-        Model::new("text-curie-001".to_string(), "openai".to_string()),
-        Model::new("text-babbage-001".to_string(), "openai".to_string()),
-        Model::new("text-ada-001".to_string(), "openai".to_string()),
-    ];
+pub async fn get_models(
+    backend_server_manager: BackendServerManagerState,
+) -> Json<ModelListResponse> {
+    let manager = backend_server_manager.lock().await;
+    let models = manager
+        .get_all_models()
+        .iter()
+        .map(|model| Model::new(&model.model_name, "llamacpp"))
+        .collect();
 
     Json(ModelListResponse {
         object: "list".to_string(),

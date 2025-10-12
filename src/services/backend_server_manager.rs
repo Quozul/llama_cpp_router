@@ -2,6 +2,7 @@ use crate::config::config::Config;
 use crate::model::Model;
 use crate::repositories::docker_repository::DockerRepository;
 use crate::services::backend_server::BackendServer;
+use axum::Json;
 use bollard::errors::Error as DockerError;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -40,6 +41,10 @@ impl BackendServerManager {
             config,
             last_used: HashMap::new(),
         }
+    }
+
+    pub fn get_all_models(&self) -> Vec<Model> {
+        self.config.get_all_models()
     }
 
     /// Returns the server if available
@@ -98,7 +103,7 @@ impl BackendServerManager {
         }
 
         // Get all model configs
-        let all_models = self.config.get_all_model();
+        let all_models = self.config.get_all_models();
 
         // Build a list of (model_config, last_used_time) for running containers
         let mut running_models = Vec::new();

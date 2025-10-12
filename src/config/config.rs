@@ -263,7 +263,7 @@ impl Config {
         self.docker.network_name.clone()
     }
 
-    pub fn get_all_model(&self) -> Vec<Model> {
+    pub fn get_all_models(&self) -> Vec<Model> {
         self.models
             .iter()
             .map(|(name, model_config)| self.get_model_from_config(name, model_config))
