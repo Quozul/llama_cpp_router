@@ -4,6 +4,7 @@ use reqwest::{Client, Error as ReqwestError};
 use serde::Serialize;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
@@ -21,28 +22,15 @@ pub struct Message {
     pub retry: Option<u64>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum EventSourceError {
-    Reqwest(ReqwestError),
+    #[error("Request error: {0}")]
+    Request(String),
+    #[error("Reqwest error: {0}")]
+    Reqwest(#[from] ReqwestError),
+    #[error("ParseError error: {0}")]
     ParseError(String),
 }
-
-impl From<ReqwestError> for EventSourceError {
-    fn from(error: ReqwestError) -> Self {
-        EventSourceError::Reqwest(error)
-    }
-}
-
-impl std::fmt::Display for EventSourceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EventSourceError::Reqwest(e) => write!(f, "Reqwest error: {}", e),
-            EventSourceError::ParseError(e) => write!(f, "Parse error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for EventSourceError {}
 
 pub struct EventSource {
     stream: UnboundedReceiverStream<Result<ClientEvent, EventSourceError>>,
@@ -67,9 +55,7 @@ impl EventSource {
             .map_err(EventSourceError::Reqwest)?;
 
         if !response.status().is_success() {
-            return Err(EventSourceError::Reqwest(
-                response.error_for_status().unwrap_err(),
-            ));
+            return Err(EventSourceError::Request(response.text().await?));
         }
 
         let (tx, rx) = mpsc::unbounded_channel();

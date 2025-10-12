@@ -1,4 +1,4 @@
-use crate::event_source::{ClientEvent, EventSource};
+use crate::event_source::{ClientEvent, EventSource, EventSourceError};
 use crate::services::backend_server_manager::BackendServerManagerState;
 use axum::response::Response;
 use axum::{
@@ -12,26 +12,32 @@ use axum::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_stream::{StreamExt, wrappers::ReceiverStream};
+use tracing::{debug, error, info};
 
 #[derive(Serialize)]
 struct ErrorResponse {
     message: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ChatCompletionRequest {
     model: String,
     stream: Option<bool>,
     messages: Vec<Message>,
+    #[serde(flatten)]
+    other: Map<String, Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     role: String,
     content: String,
+    #[serde(flatten)]
+    other: Map<String, Value>,
 }
 
 pub async fn post_chat_completions(
@@ -76,29 +82,36 @@ async fn streaming(
         };
 
         let backend_url = format!("http://{}/v1/chat/completions", backend.hostname);
-        let mut es = EventSource::new(&backend_url, &payload).await.unwrap();
-        while let Some(event) = es.next().await {
-            match event {
-                Ok(ClientEvent::Open) => {
-                    let _ = tx
-                        .send(Ok(Event::default().comment("Connection open")))
-                        .await;
-                }
-                Ok(ClientEvent::Message(message)) => {
-                    let _ = tx.send(Ok(Event::default().data(&message.data))).await;
-                }
-                Err(err) => {
-                    let _ = tx
-                        .send(Ok(Event::default().data(
-                            serde_json::to_string(&ErrorResponse {
-                                message: err.to_string(),
-                            })
-                            .unwrap(),
-                        )))
-                        .await;
+        let es = EventSource::new(&backend_url, &payload).await;
+        match es {
+            Ok(mut es) => {
+                while let Some(event) = es.next().await {
+                    match event {
+                        Ok(ClientEvent::Open) => {
+                            let _ = tx
+                                .send(Ok(Event::default().comment("Connection open")))
+                                .await;
+                        }
+                        Ok(ClientEvent::Message(message)) => {
+                            let _ = tx.send(Ok(Event::default().data(&message.data))).await;
+                        }
+                        Err(err) => {
+                            let _ = tx
+                                .send(Ok(Event::default().data(
+                                    serde_json::to_string(&ErrorResponse {
+                                        message: err.to_string(),
+                                    })
+                                    .unwrap(),
+                                )))
+                                .await;
+                        }
+                    }
                 }
             }
-        }
+            Err(err) => {
+                error!("{err}");
+            }
+        };
     });
 
     (
