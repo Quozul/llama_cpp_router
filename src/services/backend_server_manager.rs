@@ -17,6 +17,7 @@ pub struct BackendServerManager {
     vram_repository: VramRepository,
     config: Config,
     last_used: HashMap<String, SystemTime>,
+    active_requests: HashMap<String, usize>,
 }
 
 #[derive(Debug, Error)]
@@ -38,6 +39,7 @@ impl BackendServerManager {
             vram_repository: VramRepository::new(),
             config: config.clone(),
             last_used: HashMap::new(),
+            active_requests: HashMap::new(),
         };
         for model in config.get_all_models() {
             manager.model_fits_total_memory(&model).await;
@@ -47,6 +49,28 @@ impl BackendServerManager {
 
     pub fn get_all_models(&self) -> Vec<Model> {
         self.config.get_all_models()
+    }
+
+    /// Increment the active request count for a model
+    pub fn increment_active_requests(&mut self, model_name: &str) {
+        if let Some(model) = self.config.get_model(model_name) {
+            let count = self
+                .active_requests
+                .entry(model.container_name.clone())
+                .or_insert(0);
+            *count += 1;
+            info!("Active requests for {}: {}", model.container_name, *count);
+        }
+    }
+
+    /// Decrement the active request count for a model
+    pub fn decrement_active_requests(&mut self, model_name: &str) {
+        if let Some(model) = self.config.get_model(model_name)
+            && let Some(count) = self.active_requests.get_mut(&model.container_name)
+        {
+            *count = count.saturating_sub(1);
+            info!("Active requests for {}: {}", model.container_name, *count);
+        }
     }
 
     /// Returns the server if available
@@ -127,6 +151,20 @@ impl BackendServerManager {
             if self.docker_repository.container_exists(&model).await
                 && self.docker_repository.is_running(&model).await?
             {
+                // Skip models with active requests
+                let active_count = self
+                    .active_requests
+                    .get(&model.container_name)
+                    .copied()
+                    .unwrap_or(0);
+                if active_count > 0 {
+                    info!(
+                        "Skipping model {} with {} active requests",
+                        model.container_name, active_count
+                    );
+                    continue;
+                }
+
                 let last_used_time = self
                     .last_used
                     .get(&model.container_name)

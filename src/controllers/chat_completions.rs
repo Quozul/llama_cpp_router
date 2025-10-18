@@ -46,12 +46,21 @@ async fn streaming(
     let (tx, rx) = mpsc::channel::<Result<Event, String>>(10);
     let event_stream = ReceiverStream::new(rx);
 
+    // Clone the model name for tracking
+    let model_name = payload.model.clone();
+    let manager_for_cleanup = backend_server_manager.clone();
+
     tokio::spawn(async move {
         let backend = {
             let mut manager = backend_server_manager.lock().await;
+            // Increment active requests before starting
+            manager.increment_active_requests(&payload.model);
+
             match manager.get_server(&payload.model).await {
                 Ok(b) => b,
                 Err(e) => {
+                    // Decrement on error before returning
+                    manager.decrement_active_requests(&payload.model);
                     let _ = tx
                         .send(Ok(Event::default().data(
                             serde_json::to_string(&ErrorResponse {
@@ -96,6 +105,10 @@ async fn streaming(
                 error!("{err}");
             }
         };
+
+        // Decrement active requests when streaming completes
+        let mut manager = manager_for_cleanup.lock().await;
+        manager.decrement_active_requests(&model_name);
     });
 
     (
@@ -115,9 +128,14 @@ async fn non_streaming(
 ) -> impl IntoResponse {
     let backend = {
         let mut manager = backend_server_manager.lock().await;
+        // Increment active requests before starting
+        manager.increment_active_requests(&payload.model);
+
         match manager.get_server(&payload.model).await {
             Ok(b) => b,
             Err(e) => {
+                // Decrement on error before returning
+                manager.decrement_active_requests(&payload.model);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ErrorResponse {
@@ -132,7 +150,7 @@ async fn non_streaming(
     let client = Client::new();
     let backend_url = format!("http://{}/v1/chat/completions", backend.hostname);
 
-    match client.post(&backend_url).json(&payload).send().await {
+    let result = match client.post(&backend_url).json(&payload).send().await {
         Ok(resp) => {
             let status = resp.status();
             match resp.json::<Value>().await {
@@ -153,5 +171,13 @@ async fn non_streaming(
             })
             .into_response(),
         ),
+    };
+
+    // Decrement active requests after request completes
+    {
+        let mut manager = backend_server_manager.lock().await;
+        manager.decrement_active_requests(&payload.model);
     }
+
+    result
 }
