@@ -5,6 +5,7 @@
 	"main": "src/index.ts",
 	"scripts": {
 		"check": "pnpm exec biome check",
+		"typecheck": "pnpm exec tsc --noEmit",
 		"start": "node src/index.ts",
 		"test": "node --test"
 	},
@@ -19,5 +20,10 @@
 		"@biomejs/biome": "2.3.0",
 		"@types/node": "24.9.1",
 		"typescript": "5.9.3"
+	},
+	"dependencies": {
+		"@hono/node-server": "1.19.6",
+		"hono": "4.10.4",
+		"zod": "4.1.12"
 	}
 }

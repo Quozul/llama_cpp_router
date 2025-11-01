@@ -1,41 +1,41 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { MethodNotAllowed, NotFound } from "#src/server/errors.ts";
-import { write } from "#src/server/utils.ts";
-import type { ModelsService } from "#src/services/modelsService.ts";
+import type { HttpBindings } from "@hono/node-server";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import type { ChatController } from "#src/server/controllers/ChatController.ts";
+import type { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
+import type { ModelsController } from "#src/server/controllers/ModelsController.ts";
 
 export class Router {
-	readonly #modelService: ModelsService;
+	readonly #app: Hono<{ Bindings: HttpBindings }>;
+	readonly #modelsController: ModelsController;
+	readonly #modelFitsController: ModelFitsController;
+	readonly #chatController: ChatController;
 
-	constructor(modelService: ModelsService) {
-		this.#modelService = modelService;
+	constructor(
+		modelsController: ModelsController,
+		modelFitsController: ModelFitsController,
+		chatController: ChatController,
+	) {
+		this.#app = new Hono<{ Bindings: HttpBindings }>();
+		this.#modelsController = modelsController;
+		this.#modelFitsController = modelFitsController;
+		this.#chatController = chatController;
+		this.#registerRoutes();
 	}
 
-	handle(req: IncomingMessage, res: ServerResponse) {
-		switch (req.url) {
-			case "/v1/models":
-				this.#getModels(req, res);
-				break;
-			default:
-				throw new NotFound(req.url);
-		}
+	#registerRoutes() {
+		this.#app.use("/*", cors());
+
+		this.#app.get("/v1/models", (c) => this.#modelsController.getModels(c));
+		this.#app.post("/v1/chat/completions", (c) =>
+			this.#chatController.getChatCompletions(c),
+		);
+		this.#app.get("/modelFits", (c) =>
+			this.#modelFitsController.getModelFits(c),
+		);
 	}
 
-	#getModels(req: IncomingMessage, res: ServerResponse): void {
-		this.#assertGet(req);
-		write(res, 200, {
-			object: "list",
-			data: this.#modelService.getModels().map((model) => ({
-				object: "model",
-				id: model.id,
-				createdAt: Date.now(),
-				owned_by: model.owner,
-			})),
-		});
-	}
-
-	#assertGet(req: IncomingMessage) {
-		if (req.method !== "GET") {
-			throw new MethodNotAllowed(req.method);
-		}
+	getApp(): Hono<{ Bindings: HttpBindings }> {
+		return this.#app;
 	}
 }

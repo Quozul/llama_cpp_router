@@ -1,59 +1,73 @@
-import {
-	createServer,
-	type IncomingMessage,
-	type ServerResponse,
-} from "node:http";
-import { MethodNotAllowed, NotFound } from "#src/server/errors.ts";
-import type { Router } from "#src/server/router.ts";
-import { write } from "#src/server/utils.ts";
+import { type HttpBindings, serve } from "@hono/node-server";
+import type { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { logger } from "hono/logger";
+import type { ConfigRepository } from "#src/repositories/configRepository.ts";
 
 export class Server {
-	readonly #router: Router;
+	readonly #app: Hono<{ Bindings: HttpBindings }>;
+	readonly #configRepository: ConfigRepository;
 
-	constructor(router: Router) {
-		this.#router = router;
+	constructor(
+		app: Hono<{ Bindings: HttpBindings }>,
+		configRepository: ConfigRepository,
+	) {
+		this.#app = app;
+		this.#configRepository = configRepository;
+		this.#setupMiddleware();
+		this.#setupErrorHandling();
 	}
 
-	run(port: string | number) {
-		const server = createServer(this.handle.bind(this));
-		server.listen(port, () => {
-			const address = `http://127.0.0.1:${port}`;
-			console.log("🌐 Server listening on", address);
-		});
+	#setupMiddleware() {
+		// Add logging middleware
+		this.#app.use("*", logger());
 	}
 
-	handle(req: IncomingMessage, res: ServerResponse) {
-		console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+	#setupErrorHandling() {
+		// Global error handler
+		this.#app.onError((err, c) => {
+			console.error(`[${c.req.method}] ${c.req.url} - ${err.message}`);
 
-		try {
-			this.#router.handle(req, res);
-		} catch (e) {
-			console.error(`[${req.method}] ${req.url} - ${e.message}\`);`);
-			if (e instanceof NotFound) {
-				this.#notFound(res);
-			} else if (e instanceof MethodNotAllowed) {
-				this.#methodNotAllowed(res);
-			} else {
-				this.#internalServerError(res);
+			if (err instanceof HTTPException) {
+				return c.json(
+					{
+						error: err.message,
+					},
+					err.status,
+				);
 			}
-		}
-	}
 
-	#notFound(res: ServerResponse) {
-		write(res, 404, {
-			notFound: true,
+			return c.json(
+				{
+					error: err.message,
+				},
+				500,
+			);
+		});
+
+		// 404 handler
+		this.#app.notFound((c) => {
+			return c.json(
+				{
+					notFound: true,
+				},
+				404,
+			);
 		});
 	}
 
-	#methodNotAllowed(res: ServerResponse) {
-		write(res, 405, {
-			text: "method not allowed",
-		});
-	}
-
-	#internalServerError(res: ServerResponse) {
-		write(res, 500, {
-			text: "internal server error",
-		});
+	run() {
+		const { port, hostname } = this.#configRepository.getServerConfiguration();
+		serve(
+			{
+				fetch: this.#app.fetch,
+				hostname,
+				port,
+			},
+			(info) => {
+				const address = `http://${info.address}:${info.port}`;
+				console.log("🌐 Server listening on", address);
+			},
+		);
 	}
 }

@@ -1,57 +1,66 @@
 import assert from "node:assert";
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { mock, test } from "node:test";
+import type { ConfigRepository } from "#src/repositories/configRepository.ts";
+import { ChatController } from "#src/server/controllers/ChatController.ts";
+import { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
+import { ModelsController } from "#src/server/controllers/ModelsController.ts";
 import { Router } from "#src/server/router.ts";
 import { Server } from "#src/server/server.ts";
+import type { LlamaProxyService } from "#src/services/llamaProxyService.ts";
+import type { ModelFitService } from "#src/services/modelFitService.ts";
 import { Model, type ModelsService } from "#src/services/modelsService.ts";
 
 function mockRouter(owner: string = "", ...models: string[]) {
 	const modelService = {
 		getModels: mock.fn(() => models.map((id) => new Model(id, owner))),
 	};
-	const router = new Router(modelService as unknown as ModelsService);
+	const modelFitService = {} as ModelFitService;
+	const llamaProxyService = {} as LlamaProxyService;
+
+	const modelsController = new ModelsController(
+		modelService as unknown as ModelsService,
+	);
+	const modelFitsController = new ModelFitsController(modelFitService);
+	const chatController = new ChatController(llamaProxyService);
+
+	const router = new Router(
+		modelsController,
+		modelFitsController,
+		chatController,
+	);
 	return { router, modelService };
 }
 
-test("handleRequest", (t) => {
-	t.test("should handle root path", () => {
+test("handleRequest", async (t) => {
+	await t.test("should handle root path", async () => {
 		// Arrange
-		const req = {
-			method: "GET",
-			url: "/",
-		} as IncomingMessage;
-		const endMock = mock.fn();
-		const res = {
-			writeHead: mock.fn(),
-			end: endMock,
-		} as unknown as ServerResponse;
 		const { router } = mockRouter();
-		const server = new Server(router);
+		const app = router.getApp();
+		const configRepository = {
+			getServerConfiguration: mock.fn(() => ({
+				port: process.env.PORT,
+				host: process.env.HOST,
+			})),
+		} as unknown as ConfigRepository;
+		new Server(app, configRepository);
 
 		// Act
-		server.handle(req, res);
+		const res = await app.request("/", { method: "GET" });
 
 		// Assert
-		assert.strictEqual(endMock.mock.calls[0].arguments[0], '{"notFound":true}');
+		assert.strictEqual(res.status, 404);
+		const body = await res.json();
+		assert.deepStrictEqual(body, { notFound: true });
 	});
 });
 
-test("GET /v1/models", (t) => {
-	t.test("should return model list", () => {
+test("GET /v1/models", async (t) => {
+	await t.test("should return model list", async () => {
 		// Arrange
-		const req = {
-			method: "GET",
-			url: "/v1/models",
-		} as IncomingMessage;
-		const endMock = mock.fn();
-		const res = {
-			writeHead: mock.fn(),
-			end: endMock,
-		} as unknown as ServerResponse;
 		const givenOwner = "bob";
 		const givenModels = ["model-a", "model-b"];
 		const { router, modelService } = mockRouter(givenOwner, ...givenModels);
-		const server = new Server(router);
+		const app = router.getApp();
 		const expectedResponse = {
 			object: "list",
 			data: [
@@ -69,51 +78,40 @@ test("GET /v1/models", (t) => {
 		};
 
 		// Act
-		server.handle(req, res);
+		const res = await app.request("/v1/models", { method: "GET" });
 
 		// Assert
+		assert.strictEqual(res.status, 200);
 		assert.strictEqual(
 			modelService.getModels.mock.callCount(),
 			1,
 			"service should be called once",
 		);
+		const body = await res.json();
 		assert.partialDeepStrictEqual(
-			JSON.parse(endMock.mock.calls[0].arguments[0]),
+			body,
 			expectedResponse,
 			"response does not include expected fields",
 		);
 	});
 
-	t.test("should return method not allowed when post request", () => {
-		// Arrange
-		const req = {
-			method: "POST",
-			url: "/v1/models",
-		} as IncomingMessage;
-		const endMock = mock.fn();
-		const res = {
-			writeHead: mock.fn(),
-			end: endMock,
-		} as unknown as ServerResponse;
-		const { router, modelService } = mockRouter();
-		const server = new Server(router);
-		const expectedResponse = {
-			text: "method not allowed",
-		};
+	await t.test(
+		"should return method not allowed when post request",
+		async () => {
+			// Arrange
+			const { router, modelService } = mockRouter();
+			const app = router.getApp();
 
-		// Act
-		server.handle(req, res);
+			// Act
+			const res = await app.request("/v1/models", { method: "POST" });
 
-		// Assert
-		assert.strictEqual(
-			modelService.getModels.mock.callCount(),
-			0,
-			"service should not be called",
-		);
-		assert.partialDeepStrictEqual(
-			JSON.parse(endMock.mock.calls[0].arguments[0]),
-			expectedResponse,
-			"response does not include expected fields",
-		);
-	});
+			// Assert
+			assert.strictEqual(res.status, 404);
+			assert.strictEqual(
+				modelService.getModels.mock.callCount(),
+				0,
+				"service should not be called",
+			);
+		},
+	);
 });
