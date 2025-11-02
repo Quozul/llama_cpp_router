@@ -38,6 +38,8 @@ const ContextSizeSchema = z
 const CommonSchema = z.object({
 	cacheType: CacheTypeSchema.default("q8_0"),
 	contextSize: ContextSizeSchema,
+	threads: z.number().int().default(-1),
+	nGpuLayers: z.number().int().nonnegative().default(99),
 	noMmap: z.boolean().default(true),
 	flashAttention: z.boolean().default(true),
 	jinja: z.boolean().default(true),
@@ -80,6 +82,7 @@ const ServerConfigurationSchema = z.object({
 const ConfigFileSchema = z
 	.object({
 		owner: z.string(),
+		unloadDuration: z.number().int().default(30),
 		system: SystemConfigurationSchema,
 		server: ServerConfigurationSchema,
 		models: z.record(z.string(), ModelConfigurationSchema),
@@ -161,6 +164,10 @@ export class ConfigRepository {
 
 	public getModelOwnerName(): string {
 		return this.#config.owner;
+	}
+
+	public getModelUnloadDuration(): number {
+		return this.#config.unloadDuration;
 	}
 
 	public getModelConfiguration(modelName: string): ModelConfiguration | null {

@@ -19,53 +19,70 @@ export class ChatController {
 		if ("stream" in request && "model" in request) {
 			const model = request.model;
 			const isStreamingRequest = request.stream;
-			const abortSignal = new AbortController();
+			const abortController = new AbortController();
 			if (isStreamingRequest) {
-				c.header("Content-Type", "text/event-stream");
-				return stream(c, async (stream) => {
-					const interval = setInterval(() => {
-						stream.write(": model is loading\r\n\r\n");
-					}, 1_000);
-					stream.onAbort(() => {
-						abortSignal.abort();
-						clearInterval(interval);
-					});
-					const response = await this.#proxy(
-						model,
-						abortSignal.signal,
-						request,
-					);
-					clearInterval(interval);
-					await stream.pipe(response);
-				});
+				return this.#stream(c, model, abortController, request);
 			} else {
 				c.env.outgoing.on("close", () => {
-					abortSignal.abort();
+					abortController.abort();
 				});
-				const response = await this.#proxy(model, abortSignal.signal, request);
+				const response = await this.#proxy(
+					model,
+					abortController.signal,
+					request,
+				);
 				return c.body(response);
 			}
 		}
 	}
 
-	async #proxy(model: string, abortSignal: AbortSignal, request: unknown) {
+	async #stream(
+		c: Context<{ Bindings: HttpBindings }>,
+		model: string,
+		abortController: AbortController,
+		request: unknown,
+	) {
 		try {
-			const response = await this.#llamaProxyService.proxyRequest(
+			const response = await this.#proxy(
 				model,
-				abortSignal,
-				JSON.stringify(request),
+				abortController.signal,
+				request,
 			);
-			if (!response) {
-				throw new HTTPException(500);
-			}
-			return response;
+
+			c.header("Content-Type", "text/event-stream");
+			return stream(c, async (stream) => {
+				const interval = setInterval(() => {
+					stream.write(": model is loading\r\n\r\n");
+				}, 1_000);
+				stream.onAbort(() => {
+					abortController.abort();
+					clearInterval(interval);
+				});
+				clearInterval(interval);
+				await stream.pipe(response);
+			});
 		} catch (e) {
 			if (e instanceof InsufficientMemoryError) {
-				throw new HTTPException(500, {
-					message: "Insufficient memory",
-				});
+				throw new HTTPException(500, { message: "Insufficient memory" });
+			} else {
+				throw e;
 			}
-			throw e;
 		}
+	}
+
+	async #proxy(
+		model: string,
+		abortSignal: AbortSignal,
+		request: unknown,
+	): Promise<ReadableStream<Uint8Array<ArrayBuffer>>> {
+		const response = await this.#llamaProxyService.proxyRequest(
+			model,
+			abortSignal,
+			JSON.stringify(request),
+		);
+		if (!response) {
+			throw new HTTPException(500);
+		}
+		return response;
 	}
 }

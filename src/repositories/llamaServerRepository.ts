@@ -199,6 +199,8 @@ export class LlamaServerRepository {
 		args.push("--cache-type-v", common.cacheType);
 		args.push("--cache-type-k", common.cacheType);
 		args.push("--ctx-size", common.contextSize.toString());
+		args.push("--threads", common.threads.toString());
+		args.push("--n-gpu-layers", common.nGpuLayers.toString());
 		if (common.noMmap) {
 			args.push("--no-mmap");
 		}

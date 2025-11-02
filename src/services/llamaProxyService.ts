@@ -15,6 +15,7 @@ export class LlamaProxyService {
 	readonly #models = new Map<string, number>();
 	readonly #ongoingRequests = new Set<string>();
 	readonly #lastUsed = new Map<string, number>();
+	readonly #unloadTimers = new Map<string, NodeJS.Timeout>(); // Track unload timers
 
 	constructor(
 		configRepository: ConfigRepository,
@@ -68,10 +69,7 @@ export class LlamaProxyService {
 				for (const candidate of unloadableCandidates) {
 					const pidToStop = this.#models.get(candidate.name);
 					if (pidToStop) {
-						console.log(`Unloading ${candidate.name}`);
-						await this.#llamaServerRepository.stop(pidToStop);
-						this.#models.delete(candidate.name);
-						this.#lastUsed.delete(candidate.name);
+						await this.#unloadModel(modelName);
 						fitResult = await this.#modelFitService.willModelFit(modelName);
 						if (fitResult.fits) {
 							break;
@@ -92,6 +90,8 @@ export class LlamaProxyService {
 			this.#models.set(modelName, llamaServerHandle.pid);
 		}
 
+		this.#resetUnloadTimer(modelName);
+
 		this.#lastUsed.set(modelName, Date.now());
 
 		const originServer = `http://${modelConfig.network.host}:${modelConfig.network.port}`;
@@ -105,5 +105,44 @@ export class LlamaProxyService {
 			body,
 		});
 		return response.body;
+	}
+
+	#resetUnloadTimer(modelName: string): void {
+		if (this.#unloadTimers.has(modelName)) {
+			clearTimeout(this.#unloadTimers.get(modelName));
+			this.#unloadTimers.delete(modelName);
+		}
+
+		const unloadMinutes = this.#configRepository.getModelUnloadDuration();
+		const timeoutMs = unloadMinutes * 60 * 1000;
+
+		const timer = setTimeout(
+			this.#unloadModel.bind(this),
+			timeoutMs,
+			modelName,
+		);
+
+		this.#unloadTimers.set(modelName, timer);
+	}
+
+	async #unloadModel(modelName: string): Promise<void> {
+		const pid = this.#models.get(modelName);
+		if (pid) {
+			console.log(`Unloading ${modelName}`);
+
+			try {
+				await this.#llamaServerRepository.stop(pid);
+				const timer = this.#unloadTimers.get(modelName);
+				if (timer) {
+					clearTimeout(timer);
+				}
+			} catch (error) {
+				console.error(`Failed to stop model ${modelName}:`, error);
+			} finally {
+				this.#models.delete(modelName);
+				this.#unloadTimers.delete(modelName);
+				this.#lastUsed.delete(modelName);
+			}
+		}
 	}
 }
