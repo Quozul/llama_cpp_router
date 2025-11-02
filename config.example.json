@@ -42,8 +42,22 @@
 			"unloadable": true,
 			"embeddings": true,
 			"pooling": "mean",
-			"common": {},
-			"sampling": {},
+			"common": {
+				"cacheType": "q8_0",
+				"contextSize": 4096,
+				"noMmap": true,
+				"flashAttention": true,
+				"nGpuLayers": 99,
+				"threads": -1
+			},
+			"sampling": {
+				"temperature": 0.8,
+				"topK": 40,
+				"topP": 0.9,
+				"minP": 0.1,
+				"repeatPenalty": 1.0,
+				"mirostat": 2
+			},
 			"network": {
 				"host": "0.0.0.0",
 				"port": 8082

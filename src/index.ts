@@ -14,12 +14,16 @@ import { ModelsService } from "#src/services/modelsService.ts";
 
 if (import.meta.main) {
 	// Repositories
-	const configRepository = await ConfigRepository.createFromFile().catch(
-		(err) => {
-			console.error(err);
-			process.exit(1);
-		},
-	);
+	let configPath = "./config.json";
+	if (process.argv.length > 2) {
+		configPath = process.argv.slice(2).join(" ");
+	}
+	const configRepository = await ConfigRepository.createFromFile(
+		configPath,
+	).catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
 	const llamaServerRepository = new LlamaServerRepository(
 		configRepository.getSystemConfiguration().llamaServer,
 	);
