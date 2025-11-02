@@ -182,12 +182,18 @@ export class LlamaServerRepository {
 			common,
 			network,
 			sampling,
+			embeddings,
+			pooling,
 		} = opts;
 		const args: string[] = [];
 
 		args.push("-m", modelFilePath);
 		if (multimodalProjectorFilePath) {
 			args.push("--mmproj", multimodalProjectorFilePath);
+		}
+		if (embeddings) {
+			args.push("--embeddings");
+			args.push("--pooling", pooling);
 		}
 
 		// network

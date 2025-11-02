@@ -75,7 +75,7 @@ export class ChatController {
 		abortSignal: AbortSignal,
 		request: unknown,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>>> {
-		const response = await this.#llamaProxyService.proxyRequest(
+		const response = await this.#llamaProxyService.chatCompletion(
 			model,
 			abortSignal,
 			JSON.stringify(request),

@@ -3,6 +3,7 @@ import { GgufParserRepository } from "#src/repositories/ggufParserRepository.ts"
 import { LlamaServerRepository } from "#src/repositories/llamaServerRepository.ts";
 import { RocmSmiRepository } from "#src/repositories/rocmSmiRepository.ts";
 import { ChatController } from "#src/server/controllers/ChatController.ts";
+import { EmbeddingsController } from "#src/server/controllers/EmbeddingsController.ts";
 import { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
 import { ModelsController } from "#src/server/controllers/ModelsController.ts";
 import { Router } from "#src/server/router.ts";
@@ -46,12 +47,14 @@ if (import.meta.main) {
 	const modelsController = new ModelsController(modelService);
 	const modelFitsController = new ModelFitsController(modelFitService);
 	const chatController = new ChatController(llamaProxyService);
+	const embeddingsController = new EmbeddingsController(llamaProxyService);
 
 	// Router and Server
 	const router = new Router(
 		modelsController,
 		modelFitsController,
 		chatController,
+		embeddingsController,
 	);
 	new Server(router.getApp(), configRepository).run();
 }

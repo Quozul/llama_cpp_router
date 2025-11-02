@@ -35,6 +35,19 @@
 				"host": "0.0.0.0",
 				"port": 8081
 			}
+		},
+		"jina-embeddings-v4-text-retrieval": {
+			"modelFilePath": "/path/to/jina-embeddings-v4-text-retrieval-Q4_K_M.gguf",
+			"multimodalProjectorFilePath": null,
+			"unloadable": true,
+			"embeddings": true,
+			"pooling": "mean",
+			"common": {},
+			"sampling": {},
+			"network": {
+				"host": "0.0.0.0",
+				"port": 8082
+			}
 		}
 	}
 }

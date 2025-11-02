@@ -59,14 +59,29 @@ const NetworkSchema = z.object({
 	port: z.number().int().positive(),
 });
 
-const ModelConfigurationSchema = z.object({
-	modelFilePath: z.string(),
-	multimodalProjectorFilePath: z.string().nullable().default(null),
-	unloadable: z.boolean().default(true),
-	common: CommonSchema,
-	sampling: SamplingSchema,
-	network: NetworkSchema,
-});
+const ModelConfigurationSchema = z
+	.object({
+		modelFilePath: z.string(),
+		multimodalProjectorFilePath: z.string().nullable().default(null),
+		unloadable: z.boolean().default(true),
+		embeddings: z.boolean().default(false),
+		pooling: z.string().default("none"),
+		common: CommonSchema,
+		sampling: SamplingSchema,
+		network: NetworkSchema,
+	})
+	.superRefine((data, ctx) => {
+		if (
+			data.embeddings &&
+			!["mean", "cls", "last", "rank"].includes(data.pooling)
+		) {
+			ctx.addIssue({
+				code: ZodIssueCode.custom,
+				message: `Pooling should be one of: "mean", "cls", "last", "rank" when embeddings is enabled`,
+				path: ["pooling"],
+			});
+		}
+	});
 
 const SystemConfigurationSchema = z.object({
 	llamaServer: z.string(),

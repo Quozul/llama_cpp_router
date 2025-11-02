@@ -6,6 +6,7 @@ import {
 } from "#src/services/modelFitService.ts";
 
 export class InsufficientMemoryError extends Error {}
+export class NotSupportedError extends Error {}
 
 export class LlamaProxyService {
 	readonly #configRepository: ConfigRepository;
@@ -27,19 +28,52 @@ export class LlamaProxyService {
 		this.#modelFitService = modelFitService;
 	}
 
-	public async proxyRequest(
+	public async chatCompletion(
 		modelName: string,
 		abortSignal: AbortSignal,
 		body?: BodyInit | null,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null> {
 		this.#ongoingRequests.add(modelName);
-		return this.#forwardRequest(modelName, abortSignal, body).finally(() => {
+		return this.#forwardRequest(
+			modelName,
+			"chat/completions",
+			abortSignal,
+			body,
+		).finally(() => {
+			this.#ongoingRequests.delete(modelName);
+		});
+	}
+
+	public async embeddings(
+		modelName: string,
+		abortSignal: AbortSignal,
+		body?: BodyInit | null,
+	): Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null> {
+		// Ensure model supports embeddings
+		const modelConfig = this.#configRepository.getModelConfiguration(modelName);
+		if (!modelConfig) {
+			throw new ModelNotFoundError(
+				"modelConfig is missing a valid configuration object",
+			);
+		}
+		if (!modelConfig.embeddings) {
+			throw new NotSupportedError("This server does not support embeddings.");
+		}
+
+		this.#ongoingRequests.add(modelName);
+		return this.#forwardRequest(
+			modelName,
+			"embeddings",
+			abortSignal,
+			body,
+		).finally(() => {
 			this.#ongoingRequests.delete(modelName);
 		});
 	}
 
 	async #forwardRequest(
 		modelName: string,
+		resource: "chat/completions" | "embeddings",
 		abortSignal: AbortSignal,
 		body?: BodyInit | null,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null> {
@@ -95,7 +129,7 @@ export class LlamaProxyService {
 		this.#lastUsed.set(modelName, Date.now());
 
 		const originServer = `http://${modelConfig.network.host}:${modelConfig.network.port}`;
-		const response = await fetch(`${originServer}/v1/chat/completions`, {
+		const response = await fetch(`${originServer}/v1/${resource}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
