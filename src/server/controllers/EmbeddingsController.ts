@@ -15,6 +15,7 @@ export class EmbeddingsController {
 		if ("model" in request) {
 			const model = request.model;
 			const abortController = new AbortController();
+			c.header("Content-Type", "application/json");
 			c.env.outgoing.on("close", () => {
 				abortController.abort();
 			});

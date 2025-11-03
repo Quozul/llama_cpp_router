@@ -23,6 +23,7 @@ export class ChatController {
 			if (isStreamingRequest) {
 				return this.#stream(c, model, abortController, request);
 			} else {
+				c.header("Content-Type", "application/json");
 				c.env.outgoing.on("close", () => {
 					abortController.abort();
 				});
