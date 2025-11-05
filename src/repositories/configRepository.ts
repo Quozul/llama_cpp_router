@@ -100,7 +100,18 @@ const ConfigFileSchema = z
 		unloadDuration: z.number().int().default(30),
 		system: SystemConfigurationSchema,
 		server: ServerConfigurationSchema,
-		models: z.record(z.string(), ModelConfigurationSchema),
+		models: z.record(
+			z.string().superRefine((data, ctx) => {
+				if (data.includes(".")) {
+					ctx.addIssue({
+						code: ZodIssueCode.custom,
+						message: `Model name cannot include a dot (.)`,
+						path: ["models", data],
+					});
+				}
+			}),
+			ModelConfigurationSchema,
+		),
 	})
 	.superRefine((data, ctx) => {
 		const seen = new Map<string, string>();
