@@ -1,5 +1,5 @@
 {
-	"owner": "Quozul",
+	"owner": "llama.cpp",
 	"unloadDuration": 30,
 	"system": {
 		"llamaServer": "/path/to/llama-server",

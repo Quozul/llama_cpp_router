@@ -1,5 +1,5 @@
 {
-	"name": "pure-nodejs-template",
+	"name": "llama_cpp_router",
 	"version": "1.0.0",
 	"description": "",
 	"main": "src/index.ts",
