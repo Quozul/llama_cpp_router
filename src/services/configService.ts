@@ -10,4 +10,8 @@ export class ConfigService {
 	public getConfig() {
 		return this.#configRepository.getConfig();
 	}
+
+	public async reloadConfig(json: unknown): Promise<void> {
+		await this.#configRepository.reloadFromJson(json);
+	}
 }

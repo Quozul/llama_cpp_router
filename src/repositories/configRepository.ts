@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { z } from "zod";
 import { ZodIssueCode } from "zod/v3";
 
@@ -138,10 +138,35 @@ export class ConfigRepository {
 	public getConfig(): ConfigFile {
 		return this.#config;
 	}
-	readonly #config: ConfigFile;
+	#config: ConfigFile;
+	readonly #configPath: string;
 
-	private constructor(config: ConfigFile) {
+	private constructor(config: ConfigFile, configPath: string) {
 		this.#config = config;
+		this.#configPath = configPath;
+	}
+
+	/**
+	 * Reload config from JSON object and save to file
+	 * @param json The config JSON to parse and validate
+	 * @throws Error if validation or file write fails
+	 */
+	public async reloadFromJson(json: unknown): Promise<void> {
+		const parsed = ConfigFileSchema.safeParse(json);
+		if (!parsed.success) {
+			const issues = parsed.error.issues
+				.map((i) => `${i.path.join(".")}: ${i.message}`)
+				.join("\n");
+			throw new Error(`Config validation error:\n${issues}`);
+		}
+
+		// Save to file first
+		await writeFile(this.#configPath, JSON.stringify(parsed.data, null, 2), {
+			encoding: "utf8",
+		});
+
+		// Then update in-memory config
+		this.#config = parsed.data;
 	}
 
 	public static async createFromFile(
@@ -165,7 +190,7 @@ export class ConfigRepository {
 			throw new Error(`Config validation error in "${configPath}":\n${issues}`);
 		}
 
-		return new ConfigRepository(parsed.data);
+		return new ConfigRepository(parsed.data, configPath);
 	}
 
 	public getSystemConfiguration(): SystemConfiguration {

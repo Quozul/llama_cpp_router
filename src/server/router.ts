@@ -45,6 +45,7 @@ export class Router {
 			this.#modelFitsController.getModelFits(c),
 		);
 		this.#app.get("/config", (c) => this.#configController.getConfig(c));
+		this.#app.post("/config", (c) => this.#configController.uploadConfig(c));
 	}
 
 	getApp(): Hono<{ Bindings: HttpBindings }> {
