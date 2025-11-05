@@ -2,10 +2,13 @@ import assert from "node:assert";
 import { mock, test } from "node:test";
 import type { ConfigRepository } from "#src/repositories/configRepository.ts";
 import { ChatController } from "#src/server/controllers/ChatController.ts";
+import { ConfigController } from "#src/server/controllers/ConfigController.ts";
+import { EmbeddingsController } from "#src/server/controllers/EmbeddingsController.ts";
 import { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
 import { ModelsController } from "#src/server/controllers/ModelsController.ts";
 import { Router } from "#src/server/router.ts";
 import { Server } from "#src/server/server.ts";
+import type { ConfigService } from "#src/services/configService.ts";
 import type { LlamaProxyService } from "#src/services/llamaProxyService.ts";
 import type { ModelFitService } from "#src/services/modelFitService.ts";
 import { Model, type ModelsService } from "#src/services/modelsService.ts";
@@ -16,17 +19,22 @@ function mockRouter(owner: string = "", ...models: string[]) {
 	};
 	const modelFitService = {} as ModelFitService;
 	const llamaProxyService = {} as LlamaProxyService;
+	const configService = {} as ConfigService;
 
 	const modelsController = new ModelsController(
 		modelService as unknown as ModelsService,
 	);
 	const modelFitsController = new ModelFitsController(modelFitService);
 	const chatController = new ChatController(llamaProxyService);
+	const embeddingsController = new EmbeddingsController(llamaProxyService);
+	const configController = new ConfigController(configService);
 
 	const router = new Router(
 		modelsController,
 		modelFitsController,
 		chatController,
+		embeddingsController,
+		configController,
 	);
 	return { router, modelService };
 }

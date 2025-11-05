@@ -132,12 +132,6 @@ export class LlamaServerRepository {
 			child.on("exit", onExit);
 		});
 
-		let stderr = "";
-		child.stderr.setEncoding("utf8");
-		child.stderr.on("data", (chunk) => {
-			stderr += chunk;
-		});
-
 		await readyPromise;
 
 		return { pid: child.pid };

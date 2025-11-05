@@ -135,6 +135,9 @@ export type SystemConfiguration = z.infer<typeof SystemConfigurationSchema>;
 export type ServerConfiguration = z.infer<typeof ServerConfigurationSchema>;
 
 export class ConfigRepository {
+	public getConfig(): ConfigFile {
+		return this.#config;
+	}
 	readonly #config: ConfigFile;
 
 	private constructor(config: ConfigFile) {
