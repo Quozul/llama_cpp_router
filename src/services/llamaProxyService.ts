@@ -85,29 +85,25 @@ export class LlamaProxyService {
 		}
 
 		if (!this.#models.has(modelName)) {
+			// Check concurrent model limit first
+			const maxConcurrent = this.#configRepository.getConcurrentModels();
+			if (maxConcurrent > 0 && this.#models.size >= maxConcurrent) {
+				console.log(
+					`Concurrent model limit (${maxConcurrent}) reached, unloading least recently used models`,
+				);
+				await this.#unloadModelsUntilCount(maxConcurrent - 1);
+			}
+
+			// Check if model will fit in memory
 			let fitResult = await this.#modelFitService.willModelFit(modelName);
 			if (!fitResult.fits) {
-				const unloadableCandidates = Array.from(this.#models.keys())
-					.map((name) => ({
-						name,
-						lastUsed: this.#lastUsed.get(name) ?? 0,
-						config: this.#configRepository.getModelConfiguration(name),
-					}))
-					.filter(
-						(candidate) =>
-							candidate.config?.unloadable !== false &&
-							!this.#ongoingRequests.has(candidate.name),
-					)
-					.sort((a, b) => a.lastUsed - b.lastUsed);
+				const candidates = this.#getUnloadableCandidates();
 
-				for (const candidate of unloadableCandidates) {
-					const pidToStop = this.#models.get(candidate.name);
-					if (pidToStop) {
-						await this.#unloadModel(modelName);
-						fitResult = await this.#modelFitService.willModelFit(modelName);
-						if (fitResult.fits) {
-							break;
-						}
+				for (const candidateName of candidates) {
+					await this.#unloadModel(candidateName);
+					fitResult = await this.#modelFitService.willModelFit(modelName);
+					if (fitResult.fits) {
+						break;
 					}
 				}
 			}
@@ -194,6 +190,39 @@ export class LlamaProxyService {
 		if (timer) {
 			clearTimeout(timer);
 			this.#unloadTimers.delete(modelName);
+		}
+	}
+
+	/**
+	 * Get a list of models that can be unloaded, sorted by least recently used first
+	 */
+	#getUnloadableCandidates(): string[] {
+		return Array.from(this.#models.keys())
+			.map((name) => ({
+				name,
+				lastUsed: this.#lastUsed.get(name) ?? 0,
+				config: this.#configRepository.getModelConfiguration(name),
+			}))
+			.filter(
+				(candidate) =>
+					candidate.config?.unloadable !== false &&
+					!this.#ongoingRequests.has(candidate.name),
+			)
+			.sort((a, b) => a.lastUsed - b.lastUsed)
+			.map((candidate) => candidate.name);
+	}
+
+	/**
+	 * Unload models until the count is below the target, using LRU strategy
+	 */
+	async #unloadModelsUntilCount(targetCount: number): Promise<void> {
+		const candidates = this.#getUnloadableCandidates();
+
+		for (const candidateName of candidates) {
+			if (this.#models.size <= targetCount) {
+				break;
+			}
+			await this.#unloadModel(candidateName);
 		}
 	}
 }

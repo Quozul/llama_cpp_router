@@ -1,6 +1,7 @@
 {
 	"owner": "llama.cpp",
 	"unloadDuration": 30,
+	"concurrentModels": 2,
 	"system": {
 		"llamaServer": "/path/to/llama-server",
 		"ggufParser": "/path/to/gguf-parser-linux-amd64",

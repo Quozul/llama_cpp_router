@@ -98,6 +98,8 @@ const ConfigFileSchema = z
 	.object({
 		owner: z.string(),
 		unloadDuration: z.number().int().default(30),
+		// Set to 0 or negative value to disable
+		concurrentModels: z.number().int().default(2),
 		system: SystemConfigurationSchema,
 		server: ServerConfigurationSchema,
 		models: z.record(
@@ -222,6 +224,10 @@ export class ConfigRepository {
 
 	public getModelUnloadDuration(): number {
 		return this.#config.unloadDuration;
+	}
+
+	public getConcurrentModels(): number {
+		return this.#config.concurrentModels;
 	}
 
 	public getModelConfiguration(modelName: string): ModelConfiguration | null {
