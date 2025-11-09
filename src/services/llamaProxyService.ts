@@ -122,6 +122,17 @@ export class LlamaProxyService {
 			const llamaServerHandle =
 				await this.#llamaServerRepository.start(modelConfig);
 			this.#models.set(modelName, llamaServerHandle.pid);
+
+			// Register crash handler to clean up state when process dies unexpectedly
+			this.#llamaServerRepository.onProcessCrash(
+				llamaServerHandle.pid,
+				(pid: number) => {
+					console.error(
+						`Model ${modelName} (PID ${pid}) crashed, cleaning up state`,
+					);
+					this.#cleanModelState(modelName);
+				},
+			);
 		}
 
 		this.#resetUnloadTimer(modelName);
@@ -166,17 +177,23 @@ export class LlamaProxyService {
 
 			try {
 				await this.#llamaServerRepository.stop(pid);
-				const timer = this.#unloadTimers.get(modelName);
-				if (timer) {
-					clearTimeout(timer);
-				}
 			} catch (error) {
 				console.error(`Failed to stop model ${modelName}:`, error);
 			} finally {
-				this.#models.delete(modelName);
-				this.#unloadTimers.delete(modelName);
-				this.#lastUsed.delete(modelName);
+				this.#cleanModelState(modelName);
 			}
+		}
+	}
+
+	#cleanModelState(modelName: string): void {
+		this.#models.delete(modelName);
+		this.#lastUsed.delete(modelName);
+		this.#ongoingRequests.delete(modelName);
+
+		const timer = this.#unloadTimers.get(modelName);
+		if (timer) {
+			clearTimeout(timer);
+			this.#unloadTimers.delete(modelName);
 		}
 	}
 }

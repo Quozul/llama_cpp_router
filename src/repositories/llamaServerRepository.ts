@@ -4,20 +4,6 @@ import * as path from "node:path";
 import type { Readable } from "node:stream";
 import type { ModelConfiguration } from "#src/repositories/configRepository.ts";
 
-/* --------------------------- Public Types --------------------------- */
-
-/**
- * Options required to launch a llama‑server instance.
- */
-export type LlamaServerLaunchOptions = {
-	/** Model name passed to `-m` (e.g. "mistral-7b") */
-	modelFilePath: string;
-	/** IP address to bind to – passed to `--host` */
-	ipAddress: string;
-	/** TCP port – passed to `--port` */
-	port: number;
-};
-
 /**
  * Result of a successful `start()` call.
  */
@@ -25,8 +11,6 @@ export type LlamaServerHandle = {
 	/** PID of the spawned process */
 	pid: number;
 };
-
-/* --------------------------- Custom Errors --------------------------- */
 
 /**
  * Thrown when the llama‑server binary cannot be started or exits before it
@@ -67,12 +51,17 @@ export class LlamaServerRepository {
 	readonly #binaryPath: string;
 
 	readonly #processes = new Map<number, ChildProcessWithoutStdin>();
+	readonly #crashHandlers = new Map<number, (pid: number) => void>();
 
 	constructor(binaryPath: string) {
 		if (!binaryPath) {
 			throw new Error("binaryPath must be supplied to LlamaServerRepository");
 		}
 		this.#binaryPath = path.resolve(binaryPath);
+	}
+
+	public onProcessCrash(pid: number, handler: (pid: number) => void): void {
+		this.#crashHandlers.set(pid, handler);
 	}
 
 	public async start(opts: ModelConfiguration): Promise<LlamaServerHandle> {
@@ -134,6 +123,21 @@ export class LlamaServerRepository {
 
 		await readyPromise;
 
+		// Set up persistent crash handler
+		child.on("exit", (code, signal) => {
+			console.error(
+				`llama-server process ${child.pid} exited unexpectedly (code=${code}, signal=${signal})`,
+			);
+			if (child.pid) {
+				this.#processes.delete(child.pid);
+				const crashHandler = this.#crashHandlers.get(child.pid);
+				if (crashHandler) {
+					crashHandler(child.pid);
+					this.#crashHandlers.delete(child.pid);
+				}
+			}
+		});
+
 		return { pid: child.pid };
 	}
 
@@ -145,6 +149,9 @@ export class LlamaServerRepository {
 				pid,
 			);
 		}
+
+		// Remove crash handler since this is an intentional stop
+		this.#crashHandlers.delete(pid);
 
 		const waitForExit = new Promise<void>((resolve) => {
 			const onClose = () => {
