@@ -8,6 +8,8 @@ import {
 export class InsufficientMemoryError extends Error {}
 export class NotSupportedError extends Error {}
 
+type Resources = "v1/chat/completions" | "v1/embeddings" | "completions";
+
 export class LlamaProxyService {
 	readonly #configRepository: ConfigRepository;
 	readonly #llamaServerRepository: LlamaServerRepository;
@@ -28,7 +30,7 @@ export class LlamaProxyService {
 		this.#modelFitService = modelFitService;
 	}
 
-	public async chatCompletion(
+	public async openAiChatCompletion(
 		modelName: string,
 		abortSignal: AbortSignal,
 		body?: BodyInit | null,
@@ -36,7 +38,7 @@ export class LlamaProxyService {
 		this.#ongoingRequests.add(modelName);
 		return this.#forwardRequest(
 			modelName,
-			"chat/completions",
+			"v1/chat/completions",
 			abortSignal,
 			body,
 		).finally(() => {
@@ -44,7 +46,23 @@ export class LlamaProxyService {
 		});
 	}
 
-	public async embeddings(
+	public async completion(
+		modelName: string,
+		abortSignal: AbortSignal,
+		body?: BodyInit | null,
+	): Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null> {
+		this.#ongoingRequests.add(modelName);
+		return this.#forwardRequest(
+			modelName,
+			"completions",
+			abortSignal,
+			body,
+		).finally(() => {
+			this.#ongoingRequests.delete(modelName);
+		});
+	}
+
+	public async openAiEmbeddings(
 		modelName: string,
 		abortSignal: AbortSignal,
 		body?: BodyInit | null,
@@ -63,7 +81,7 @@ export class LlamaProxyService {
 		this.#ongoingRequests.add(modelName);
 		return this.#forwardRequest(
 			modelName,
-			"embeddings",
+			"v1/embeddings",
 			abortSignal,
 			body,
 		).finally(() => {
@@ -73,7 +91,7 @@ export class LlamaProxyService {
 
 	async #forwardRequest(
 		modelName: string,
-		resource: "chat/completions" | "embeddings",
+		resource: Resources,
 		abortSignal: AbortSignal,
 		body?: BodyInit | null,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null> {
@@ -136,7 +154,7 @@ export class LlamaProxyService {
 		this.#lastUsed.set(modelName, Date.now());
 
 		const originServer = `http://${modelConfig.network.host}:${modelConfig.network.port}`;
-		const response = await fetch(`${originServer}/v1/${resource}`, {
+		const response = await fetch(`${originServer}/${resource}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

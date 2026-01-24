@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import * as os from "node:os";
+import { access, constants } from "node:fs/promises";
+import { platform } from "node:os";
 import path from "node:path";
 
 export abstract class BaseCliCommandRepository {
@@ -12,9 +13,15 @@ export abstract class BaseCliCommandRepository {
 		this.binaryPath = path.resolve(binaryPath);
 	}
 
-	spawnAsync(
+	async spawnAsync(
 		args: string[],
 	): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+		try {
+			await access(this.binaryPath, constants.X_OK);
+		} catch (_e) {
+			throw new Error("Binary not found or not executable");
+		}
+
 		return new Promise((resolve) => {
 			const child = spawn(this.binaryPath, args, {
 				stdio: ["ignore", "pipe", "pipe"],
@@ -40,7 +47,7 @@ export abstract class BaseCliCommandRepository {
 	}
 
 	escapeArg(arg: string): string {
-		if (os.platform() === "win32") {
+		if (platform() === "win32") {
 			return /\s/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg;
 		}
 		return /[^\w@%+=:,./-]/.test(arg) ? `'${arg.replace(/'/g, "'\\''")}'` : arg;

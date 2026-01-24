@@ -2,11 +2,12 @@ import { ConfigRepository } from "#src/repositories/configRepository.ts";
 import { GgufParserRepository } from "#src/repositories/ggufParserRepository.ts";
 import { LlamaServerRepository } from "#src/repositories/llamaServerRepository.ts";
 import { RocmSmiRepository } from "#src/repositories/rocmSmiRepository.ts";
-import { ChatController } from "#src/server/controllers/ChatController.ts";
+import { CompletionController } from "#src/server/controllers/CompletionController.ts";
 import { ConfigController } from "#src/server/controllers/ConfigController.ts";
 import { EmbeddingsController } from "#src/server/controllers/EmbeddingsController.ts";
 import { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
 import { ModelsController } from "#src/server/controllers/ModelsController.ts";
+import { OpenAiChatCompletionController } from "#src/server/controllers/OpenAiChatCompletionController.ts";
 import { Router } from "#src/server/router.ts";
 import { Server } from "#src/server/server.ts";
 import { ConfigService } from "#src/services/configService.ts";
@@ -52,7 +53,10 @@ if (import.meta.main) {
 	// Controllers
 	const modelsController = new ModelsController(modelService);
 	const modelFitsController = new ModelFitsController(modelFitService);
-	const chatController = new ChatController(llamaProxyService);
+	const completionController = new CompletionController(llamaProxyService);
+	const openAiChatCompletionController = new OpenAiChatCompletionController(
+		llamaProxyService,
+	);
 	const embeddingsController = new EmbeddingsController(llamaProxyService);
 
 	// Router and Server
@@ -61,7 +65,8 @@ if (import.meta.main) {
 	const router = new Router(
 		modelsController,
 		modelFitsController,
-		chatController,
+		completionController,
+		openAiChatCompletionController,
 		embeddingsController,
 		configController,
 	);

@@ -8,7 +8,7 @@ export class ModelsController {
 		this.#modelService = modelService;
 	}
 
-	async getModels(c: Context) {
+	async getOpenAiModels(c: Context) {
 		const models = this.#modelService.getModels();
 		return c.json({
 			object: "list",

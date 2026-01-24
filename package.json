@@ -17,13 +17,13 @@
 	"license": "ISC",
 	"type": "module",
 	"devDependencies": {
-		"@biomejs/biome": "2.3.0",
-		"@types/node": "24.9.1",
+		"@biomejs/biome": "2.3.12",
+		"@types/node": "24.10.9",
 		"typescript": "5.9.3"
 	},
 	"dependencies": {
-		"@hono/node-server": "1.19.6",
-		"hono": "4.10.4",
-		"zod": "4.1.12"
+		"@hono/node-server": "1.19.9",
+		"hono": "4.11.5",
+		"zod": "4.3.6"
 	}
 }

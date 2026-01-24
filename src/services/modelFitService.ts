@@ -22,6 +22,7 @@ export type ModelFitResult = {
 };
 
 export class ModelNotFoundError extends Error {}
+export class NoGpuError extends Error {}
 
 export class ModelFitService {
 	readonly #ggufParserRepository: GgufParserRepository;
@@ -97,11 +98,6 @@ export class ModelFitService {
 		const ggufParams = this.#buildEstimateParameters(modelConfig);
 		const fresh =
 			await this.#ggufParserRepository.getMemoryEstimate(ggufParams);
-		if (!fresh) {
-			throw new Error(
-				`gguf‑parser returned an empty response for "${modelName}"`,
-			);
-		}
 
 		this.#ggufCache.set(modelName, fresh);
 		return fresh;
@@ -124,27 +120,25 @@ export class ModelFitService {
 	}
 
 	async #getFreeVram(deviceIndex: number): Promise<number> {
-		const rocmOpts: RocmSmiQueryOptions = { device: deviceIndex };
-		const vramInfos: RocmSmiVramInfo[] =
-			await this.#rocmSmiRepository.getVramInfo(rocmOpts);
-
-		if (vramInfos.length === 0) {
-			throw new Error(
-				`rocm‑smi did not return any VRAM info for device ${deviceIndex}`,
-			);
-		}
-
-		return vramInfos[0].totalBytes - vramInfos[0].usedBytes;
+		const gpuInfo = await this.#getFirstGpu(deviceIndex);
+		return gpuInfo.totalBytes - gpuInfo.usedBytes;
 	}
 
 	async #buildDetails(
 		deviceIndex: number,
 		totalBytes: number,
 	): Promise<string> {
+		const gpuInfo = await this.#getFirstGpu(deviceIndex);
+		return `GPU ${gpuInfo.card}: ${totalBytes.toLocaleString()} B total`;
+	}
+
+	async #getFirstGpu(deviceIndex: number): Promise<RocmSmiVramInfo> {
+		const hasAtLeastOneElement = <T>(arr: T[]): arr is [T] => arr.length > 0;
 		const rocmOpts: RocmSmiQueryOptions = { device: deviceIndex };
 		const vramInfos = await this.#rocmSmiRepository.getVramInfo(rocmOpts);
-		const gpuInfo = vramInfos[0];
-
-		return `GPU ${gpuInfo.card}: ${totalBytes.toLocaleString()} B total`;
+		if (hasAtLeastOneElement(vramInfos)) {
+			return vramInfos[0];
+		}
+		throw new NoGpuError();
 	}
 }

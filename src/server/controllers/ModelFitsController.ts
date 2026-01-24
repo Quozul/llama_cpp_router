@@ -23,7 +23,7 @@ export class ModelFitsController {
 			return c.json(estimate);
 		} catch (e) {
 			if (e instanceof ModelNotFoundError) {
-				throw new HTTPException(404, { message: "not found" });
+				throw new HTTPException(404, { message: "model not found" });
 			}
 			throw e;
 		}

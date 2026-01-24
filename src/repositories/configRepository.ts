@@ -46,7 +46,7 @@ const CommonSchema = z.object({
 });
 
 const SamplingSchema = z.object({
-	temperature: z.number().positive().default(0.8),
+	temperature: z.number().min(0).default(0.8),
 	topK: z.number().int().nonnegative().default(40),
 	topP: z.number().min(0).max(1).default(0.9),
 	minP: z.number().min(0).max(1).default(0.1),

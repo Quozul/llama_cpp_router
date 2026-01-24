@@ -7,21 +7,21 @@ import {
 	type LlamaProxyService,
 } from "#src/services/llamaProxyService.ts";
 
-export class ChatController {
+export class CompletionController {
 	readonly #llamaProxyService: LlamaProxyService;
 
 	constructor(llamaProxyService: LlamaProxyService) {
 		this.#llamaProxyService = llamaProxyService;
 	}
 
-	async getChatCompletions(c: Context<{ Bindings: HttpBindings }>) {
+	async getCompletion(c: Context<{ Bindings: HttpBindings }>) {
 		const request = await c.req.json();
 		if ("stream" in request && "model" in request) {
-			const model = request.model;
+			const { model, ...llamaCppRequest } = request; // We don't have to send the model to Llama.cpp backend
 			const isStreamingRequest = request.stream;
 			const abortController = new AbortController();
 			if (isStreamingRequest) {
-				return this.#stream(c, model, abortController, request);
+				return this.#stream(c, model, abortController, llamaCppRequest);
 			} else {
 				c.header("Content-Type", "application/json");
 				c.env.outgoing.on("close", () => {
@@ -30,7 +30,7 @@ export class ChatController {
 				const response = await this.#proxy(
 					model,
 					abortController.signal,
-					request,
+					llamaCppRequest,
 				);
 				return c.body(response);
 			}
@@ -76,7 +76,7 @@ export class ChatController {
 		abortSignal: AbortSignal,
 		request: unknown,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>>> {
-		const response = await this.#llamaProxyService.chatCompletion(
+		const response = await this.#llamaProxyService.completion(
 			model,
 			abortSignal,
 			JSON.stringify(request),

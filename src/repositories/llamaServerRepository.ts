@@ -99,7 +99,7 @@ export class LlamaServerRepository {
 					}
 				}
 				if (!stdoutBuffer.endsWith("\n")) {
-					stdoutBuffer = lines[lines.length - 1];
+					stdoutBuffer = lines[lines.length - 1] ?? "";
 				} else {
 					stdoutBuffer = "";
 				}
@@ -213,6 +213,8 @@ export class LlamaServerRepository {
 		}
 		if (common.jinja) {
 			args.push("--jinja");
+		} else {
+			args.push("--no-jinja");
 		}
 
 		// sampling

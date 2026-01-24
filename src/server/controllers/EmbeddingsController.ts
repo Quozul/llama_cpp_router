@@ -10,7 +10,7 @@ export class EmbeddingsController {
 		this.#llamaProxyService = llamaProxyService;
 	}
 
-	async getEmbeddings(c: Context<{ Bindings: HttpBindings }>) {
+	async getOpenAiEmbeddings(c: Context<{ Bindings: HttpBindings }>) {
 		const request = await c.req.json();
 		if ("model" in request) {
 			const model = request.model;
@@ -33,7 +33,7 @@ export class EmbeddingsController {
 		abortSignal: AbortSignal,
 		request: unknown,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>>> {
-		const response = await this.#llamaProxyService.embeddings(
+		const response = await this.#llamaProxyService.openAiEmbeddings(
 			model,
 			abortSignal,
 			JSON.stringify(request),
