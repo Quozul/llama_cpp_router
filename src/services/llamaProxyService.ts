@@ -7,6 +7,7 @@ import {
 
 export class InsufficientMemoryError extends Error {}
 export class NotSupportedError extends Error {}
+export class AbortedError extends Error {}
 
 type Resources = "v1/chat/completions" | "v1/embeddings" | "completions";
 
@@ -110,6 +111,10 @@ export class LlamaProxyService {
 		this.#lastUsed.set(modelName, Date.now());
 
 		const originServer = `http://${modelConfig.network.host}:${modelConfig.network.port}`;
+
+		if (abortSignal.aborted) {
+			throw new AbortedError();
+		}
 		const response = await fetch(`${originServer}/${resource}`, {
 			method: "POST",
 			headers: {
