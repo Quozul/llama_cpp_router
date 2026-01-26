@@ -18,6 +18,7 @@ export class LlamaProxyService {
 	readonly #models = new Map<string, number>();
 	readonly #ongoingRequests = new Set<string>();
 	readonly #lastUsed = new Map<string, number>();
+	readonly #loadingPromises = new Map<string, Promise<void>>();
 	readonly #unloadTimers = new Map<string, NodeJS.Timeout>(); // Track unload timers
 
 	constructor(
@@ -102,7 +103,53 @@ export class LlamaProxyService {
 			);
 		}
 
-		if (!this.#models.has(modelName)) {
+		await this.#ensureModelLoaded(modelName);
+
+		this.#resetUnloadTimer(modelName);
+
+		this.#lastUsed.set(modelName, Date.now());
+
+		const originServer = `http://${modelConfig.network.host}:${modelConfig.network.port}`;
+		const response = await fetch(`${originServer}/${resource}`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			signal: abortSignal,
+			body,
+		});
+		return response.body;
+	}
+
+	async #ensureModelLoaded(modelName: string): Promise<void> {
+		if (this.#models.has(modelName)) {
+			return;
+		}
+
+		let loadingPromise = this.#loadingPromises.get(modelName);
+		if (!loadingPromise) {
+			loadingPromise = this.#loadModel(modelName);
+			this.#loadingPromises.set(modelName, loadingPromise);
+		}
+
+		return loadingPromise;
+	}
+
+	async #loadModel(modelName: string): Promise<void> {
+		try {
+			if (this.#models.has(modelName)) {
+				return;
+			}
+
+			const modelConfig =
+				this.#configRepository.getModelConfiguration(modelName);
+			if (!modelConfig) {
+				throw new ModelNotFoundError(
+					"modelConfig is missing a valid configuration object",
+				);
+			}
+
 			// Check concurrent model limit first
 			const maxConcurrent = this.#configRepository.getConcurrentModels();
 			if (maxConcurrent > 0 && this.#models.size >= maxConcurrent) {
@@ -147,23 +194,9 @@ export class LlamaProxyService {
 					this.#cleanModelState(modelName);
 				},
 			);
+		} finally {
+			this.#loadingPromises.delete(modelName);
 		}
-
-		this.#resetUnloadTimer(modelName);
-
-		this.#lastUsed.set(modelName, Date.now());
-
-		const originServer = `http://${modelConfig.network.host}:${modelConfig.network.port}`;
-		const response = await fetch(`${originServer}/${resource}`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			signal: abortSignal,
-			body,
-		});
-		return response.body;
 	}
 
 	#resetUnloadTimer(modelName: string): void {
@@ -180,6 +213,7 @@ export class LlamaProxyService {
 			timeoutMs,
 			modelName,
 		);
+		timer.unref();
 
 		this.#unloadTimers.set(modelName, timer);
 	}
