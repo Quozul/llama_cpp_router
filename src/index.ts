@@ -1,7 +1,9 @@
+import type { MemoryInfoRepository } from "#src/interfaces/memoryInfoRepository.ts";
 import { ConfigRepository } from "#src/repositories/configRepository.ts";
 import { GgufParserRepository } from "#src/repositories/ggufParserRepository.ts";
 import { LlamaServerRepository } from "#src/repositories/llamaServerRepository.ts";
 import { RocmSmiRepository } from "#src/repositories/rocmSmiRepository.ts";
+import { SystemMemoryRepository } from "#src/repositories/systemMemoryRepository.ts";
 import { CompletionController } from "#src/server/controllers/CompletionController.ts";
 import { ConfigController } from "#src/server/controllers/ConfigController.ts";
 import { EmbeddingsController } from "#src/server/controllers/EmbeddingsController.ts";
@@ -33,14 +35,23 @@ if (import.meta.main) {
 	const ggufParserRepository = new GgufParserRepository(
 		configRepository.getSystemConfiguration().ggufParser,
 	);
-	const rocmSmiRepository = new RocmSmiRepository(
-		configRepository.getSystemConfiguration().rocmSmi,
-	);
+
+	const memoryType = configRepository.getMemoryType();
+	let memoryInfoRepository: MemoryInfoRepository;
+	if (memoryType === "unified") {
+		memoryInfoRepository = new SystemMemoryRepository();
+	} else if (memoryType === "amd") {
+		memoryInfoRepository = new RocmSmiRepository(
+			configRepository.getSystemConfiguration().rocmSmi,
+		);
+	} else {
+		throw new Error("Unsupported memory type");
+	}
 
 	// Services
 	const modelFitService = new ModelFitService(
 		ggufParserRepository,
-		rocmSmiRepository,
+		memoryInfoRepository,
 		configRepository,
 	);
 	const modelService = new ModelsService(configRepository);

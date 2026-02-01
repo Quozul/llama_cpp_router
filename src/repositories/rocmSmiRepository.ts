@@ -1,3 +1,7 @@
+import type {
+	MemoryInfoRepository,
+	MemoryUsageInfo,
+} from "#src/interfaces/memoryInfoRepository.ts";
 import { BaseCliCommandRepository } from "#src/repositories/baseCliCommandRepository.ts";
 
 export type RocmSmiVramInfo = {
@@ -30,8 +34,24 @@ export class RocmSmiError extends Error {
 	}
 }
 
-export class RocmSmiRepository extends BaseCliCommandRepository {
-	public async getVramInfo(
+export class RocmSmiRepository
+	extends BaseCliCommandRepository
+	implements MemoryInfoRepository
+{
+	public async getMemoryInfo(): Promise<MemoryUsageInfo[]> {
+		const deviceIndex = 0;
+		const rocmOpts: RocmSmiQueryOptions = { device: deviceIndex };
+		const rawInfo = await this.getVramInfo(rocmOpts);
+
+		return rawInfo.map((info) => ({
+			sourceId: info.card,
+			totalBytes: info.totalBytes,
+			usedBytes: info.usedBytes,
+			freeBytes: info.totalBytes - info.usedBytes,
+		}));
+	}
+
+	private async getVramInfo(
 		opts: RocmSmiQueryOptions = {},
 	): Promise<RocmSmiVramInfo[]> {
 		const args = this.#buildArgs(opts);

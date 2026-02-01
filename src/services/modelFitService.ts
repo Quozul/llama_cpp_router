@@ -1,4 +1,8 @@
 import type {
+	MemoryInfoRepository,
+	MemoryUsageInfo,
+} from "#src/interfaces/memoryInfoRepository.ts";
+import type {
 	ConfigRepository,
 	ModelConfiguration,
 } from "#src/repositories/configRepository.ts";
@@ -7,11 +11,6 @@ import type {
 	GgufParserJson,
 	GgufParserRepository,
 } from "#src/repositories/ggufParserRepository.ts";
-import type {
-	RocmSmiQueryOptions,
-	RocmSmiRepository,
-	RocmSmiVramInfo,
-} from "#src/repositories/rocmSmiRepository.ts";
 
 export type ModelFitResult = {
 	fits: boolean;
@@ -26,34 +25,31 @@ export class NoGpuError extends Error {}
 
 export class ModelFitService {
 	readonly #ggufParserRepository: GgufParserRepository;
-	readonly #rocmSmiRepository: RocmSmiRepository;
+	readonly #memoryInfoRepository: MemoryInfoRepository;
 	readonly #configRepository: ConfigRepository;
 	readonly #ggufCache = new Map<string, GgufParserJson>();
 
 	constructor(
 		ggufParserRepository: GgufParserRepository,
-		rocmSmiRepository: RocmSmiRepository,
+		rocmSmiRepository: MemoryInfoRepository,
 		configRepository: ConfigRepository,
 	) {
 		this.#ggufParserRepository = ggufParserRepository;
-		this.#rocmSmiRepository = rocmSmiRepository;
+		this.#memoryInfoRepository = rocmSmiRepository;
 		this.#configRepository = configRepository;
 	}
 
-	public async willModelFit(
-		modelName: string,
-		deviceIndex: number = 0,
-	): Promise<ModelFitResult> {
+	public async willModelFit(modelName: string): Promise<ModelFitResult> {
 		const ggufJson = await this.#getOrCacheGgufJson(modelName);
 		const requiredVramBytes = this.#extractRequiredVram(ggufJson);
-		const freeVramBytes = await this.#getFreeVram(deviceIndex);
+		const freeVramBytes = await this.#getFreeVram();
 
 		const fits = requiredVramBytes <= freeVramBytes;
 		const message = fits
-			? "✅ Model fits in the available VRAM."
-			: "❌ Model does NOT fit in the available VRAM.";
+			? "✅ Model fits in the available memory."
+			: "❌ Model does NOT fit in the available memory.";
 
-		const details = await this.#buildDetails(deviceIndex, freeVramBytes);
+		const details = await this.#buildDetails(freeVramBytes);
 
 		return {
 			fits,
@@ -112,30 +108,26 @@ export class ModelFitService {
 		const firstVramInfo = firstItem.vrams[0];
 		if (!firstVramInfo) {
 			throw new Error(
-				"gguf‑parser returned no VRAM info for the first estimate item",
+				"gguf‑parser returned no memory info for the first estimate item",
 			);
 		}
 
 		return firstVramInfo.nonuma;
 	}
 
-	async #getFreeVram(deviceIndex: number): Promise<number> {
-		const gpuInfo = await this.#getFirstGpu(deviceIndex);
+	async #getFreeVram(): Promise<number> {
+		const gpuInfo = await this.#getFirstGpu();
 		return gpuInfo.totalBytes - gpuInfo.usedBytes;
 	}
 
-	async #buildDetails(
-		deviceIndex: number,
-		totalBytes: number,
-	): Promise<string> {
-		const gpuInfo = await this.#getFirstGpu(deviceIndex);
-		return `GPU ${gpuInfo.card}: ${totalBytes.toLocaleString()} B total`;
+	async #buildDetails(totalBytes: number): Promise<string> {
+		const gpuInfo = await this.#getFirstGpu();
+		return `GPU ${gpuInfo.sourceId}: ${totalBytes.toLocaleString()} B total`;
 	}
 
-	async #getFirstGpu(deviceIndex: number): Promise<RocmSmiVramInfo> {
+	async #getFirstGpu(): Promise<MemoryUsageInfo> {
 		const hasAtLeastOneElement = <T>(arr: T[]): arr is [T] => arr.length > 0;
-		const rocmOpts: RocmSmiQueryOptions = { device: deviceIndex };
-		const vramInfos = await this.#rocmSmiRepository.getVramInfo(rocmOpts);
+		const vramInfos = await this.#memoryInfoRepository.getMemoryInfo();
 		if (hasAtLeastOneElement(vramInfos)) {
 			return vramInfos[0];
 		}

@@ -14,6 +14,8 @@ const CacheTypeSchema = z.enum([
 	"q5_1",
 ]);
 
+export type MemoryType = "unified" | "amd";
+
 function parseKString(v: unknown): unknown {
 	if (typeof v !== "string") return v;
 
@@ -87,6 +89,7 @@ const SystemConfigurationSchema = z.object({
 	llamaServer: z.string(),
 	ggufParser: z.string(),
 	rocmSmi: z.string(),
+	memoryType: z.enum(["unified", "amd"]),
 });
 
 const ServerConfigurationSchema = z.object({
@@ -233,5 +236,9 @@ export class ConfigRepository {
 	public getModelConfiguration(modelName: string): ModelConfiguration | null {
 		const cfg = this.#config.models[modelName];
 		return cfg ?? null;
+	}
+
+	public getMemoryType(): MemoryType {
+		return this.#config.system.memoryType;
 	}
 }

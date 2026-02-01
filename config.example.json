@@ -5,7 +5,8 @@
 	"system": {
 		"llamaServer": "/path/to/llama-server",
 		"ggufParser": "/path/to/gguf-parser-linux-amd64",
-		"rocmSmi": "/opt/rocm/bin/rocm-smi"
+		"rocmSmi": "/opt/rocm/bin/rocm-smi",
+		"memoryType": "unified"
 	},
 	"server": {
 		"hostname": "0.0.0.0",
