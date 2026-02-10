@@ -10,6 +10,7 @@ import { EmbeddingsController } from "#src/server/controllers/EmbeddingsControll
 import { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
 import { ModelsController } from "#src/server/controllers/ModelsController.ts";
 import { OpenAiChatCompletionController } from "#src/server/controllers/OpenAiChatCompletionController.ts";
+import { OpenAiResponsesController } from "#src/server/controllers/OpenAiResponsesController.ts";
 import { Router } from "#src/server/router.ts";
 import { Server } from "#src/server/server.ts";
 import { ConfigService } from "#src/services/configService.ts";
@@ -65,6 +66,7 @@ if (import.meta.main) {
 	const modelsController = new ModelsController(modelService);
 	const modelFitsController = new ModelFitsController(modelFitService);
 	const completionController = new CompletionController(llamaProxyService);
+	const responsesController = new OpenAiResponsesController(llamaProxyService);
 	const openAiChatCompletionController = new OpenAiChatCompletionController(
 		llamaProxyService,
 	);
@@ -77,6 +79,7 @@ if (import.meta.main) {
 		modelsController,
 		modelFitsController,
 		completionController,
+		responsesController,
 		openAiChatCompletionController,
 		embeddingsController,
 		configController,

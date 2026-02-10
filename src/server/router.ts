@@ -7,6 +7,7 @@ import type { EmbeddingsController } from "#src/server/controllers/EmbeddingsCon
 import type { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
 import type { ModelsController } from "#src/server/controllers/ModelsController.ts";
 import type { OpenAiChatCompletionController } from "#src/server/controllers/OpenAiChatCompletionController.ts";
+import type { OpenAiResponsesController } from "#src/server/controllers/OpenAiResponsesController.ts";
 
 export class Router {
 	readonly #app: Hono<{ Bindings: HttpBindings }>;
@@ -14,6 +15,7 @@ export class Router {
 	readonly #modelFitsController: ModelFitsController;
 	readonly #configController: ConfigController;
 	readonly #completionController: CompletionController;
+	readonly #openAiResponsesController1: OpenAiResponsesController;
 	readonly #openAiChatCompletionController: OpenAiChatCompletionController;
 	readonly #embeddingsController: EmbeddingsController;
 
@@ -21,6 +23,7 @@ export class Router {
 		modelsController: ModelsController,
 		modelFitsController: ModelFitsController,
 		completionController: CompletionController,
+		openAiResponsesController: OpenAiResponsesController,
 		openAiChatCompletionController: OpenAiChatCompletionController,
 		embeddingsController: EmbeddingsController,
 		configController: ConfigController,
@@ -29,6 +32,7 @@ export class Router {
 		this.#modelsController = modelsController;
 		this.#modelFitsController = modelFitsController;
 		this.#completionController = completionController;
+		this.#openAiResponsesController1 = openAiResponsesController;
 		this.#openAiChatCompletionController = openAiChatCompletionController;
 		this.#embeddingsController = embeddingsController;
 		this.#configController = configController;
@@ -46,6 +50,9 @@ export class Router {
 		);
 		this.#app.post("/completion", (c) =>
 			this.#completionController.getCompletion(c),
+		);
+		this.#app.post("/v1/responses", (c) =>
+			this.#openAiResponsesController1.getOpenAiResponses(c),
 		);
 		this.#app.post("/v1/embeddings", (c) =>
 			this.#embeddingsController.getOpenAiEmbeddings(c),

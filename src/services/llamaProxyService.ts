@@ -9,7 +9,11 @@ export class InsufficientMemoryError extends Error {}
 export class NotSupportedError extends Error {}
 export class AbortedError extends Error {}
 
-type Resources = "v1/chat/completions" | "v1/embeddings" | "completions";
+type Resources =
+	| "v1/chat/completions"
+	| "v1/embeddings"
+	| "completions"
+	| "v1/responses";
 
 export class LlamaProxyService {
 	readonly #configRepository: ConfigRepository;
@@ -41,6 +45,22 @@ export class LlamaProxyService {
 		return this.#forwardRequest(
 			modelName,
 			"v1/chat/completions",
+			abortSignal,
+			body,
+		).finally(() => {
+			this.#ongoingRequests.delete(modelName);
+		});
+	}
+
+	public async openAiResponses(
+		modelName: string,
+		abortSignal: AbortSignal,
+		body?: BodyInit | null,
+	): Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null> {
+		this.#ongoingRequests.add(modelName);
+		return this.#forwardRequest(
+			modelName,
+			"v1/responses",
 			abortSignal,
 			body,
 		).finally(() => {

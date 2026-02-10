@@ -7,6 +7,7 @@ import { EmbeddingsController } from "#src/server/controllers/EmbeddingsControll
 import { ModelFitsController } from "#src/server/controllers/ModelFitsController.ts";
 import { ModelsController } from "#src/server/controllers/ModelsController.ts";
 import { OpenAiChatCompletionController } from "#src/server/controllers/OpenAiChatCompletionController.ts";
+import { OpenAiResponsesController } from "#src/server/controllers/OpenAiResponsesController.ts";
 import { Router } from "#src/server/router.ts";
 import { Server } from "#src/server/server.ts";
 import type { ConfigService } from "#src/services/configService.ts";
@@ -29,6 +30,9 @@ function mockRouter(owner: string = "", ...models: string[]) {
 	const openAiChatCompletionController = new OpenAiChatCompletionController(
 		llamaProxyService,
 	);
+	const openAiResponsesController = new OpenAiResponsesController(
+		llamaProxyService,
+	);
 	const completionController = new CompletionController(llamaProxyService);
 	const embeddingsController = new EmbeddingsController(llamaProxyService);
 	const configController = new ConfigController(configService);
@@ -37,6 +41,7 @@ function mockRouter(owner: string = "", ...models: string[]) {
 		modelsController,
 		modelFitsController,
 		completionController,
+		openAiResponsesController,
 		openAiChatCompletionController,
 		embeddingsController,
 		configController,
