@@ -45,6 +45,7 @@ const CommonSchema = z.object({
 	noMmap: z.boolean().default(true),
 	flashAttention: z.boolean().default(true),
 	jinja: z.boolean().default(true),
+	parallel: z.number().nonnegative().default(1),
 });
 
 const SamplingSchema = z.object({
@@ -54,6 +55,7 @@ const SamplingSchema = z.object({
 	minP: z.number().min(0).max(1).default(0.1),
 	repeatPenalty: z.number().positive().default(1.0),
 	mirostat: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(2),
+	reasoningEffort: z.enum(["low", "medium", "high"]).nullable().default(null),
 });
 
 const NetworkSchema = z.object({

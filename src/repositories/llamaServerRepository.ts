@@ -216,6 +216,8 @@ export class LlamaServerRepository {
 		} else {
 			args.push("--no-jinja");
 		}
+		args.push("--parallel", common.parallel.toString());
+		args.push("--direct-io");
 
 		// sampling
 		args.push("--temp", sampling.temperature.toString());
@@ -224,6 +226,16 @@ export class LlamaServerRepository {
 		args.push("--min-p", sampling.minP.toString());
 		args.push("--repeat-penalty", sampling.repeatPenalty.toString());
 		args.push("--mirostat", sampling.mirostat.toString());
+		args.push("--cont-batching");
+		// Only for gpt-oss
+		if (sampling.reasoningEffort) {
+			args.push("--chat-template-kwargs");
+			args.push(
+				JSON.stringify({
+					reasoning_effort: sampling.reasoningEffort.toString(),
+				}),
+			);
+		}
 
 		return args;
 	}
