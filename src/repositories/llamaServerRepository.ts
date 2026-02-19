@@ -208,6 +208,8 @@ export class LlamaServerRepository {
 		args.push("--ctx-size", common.contextSize.toString());
 		args.push("--threads", common.threads.toString());
 		args.push("--n-gpu-layers", common.nGpuLayers.toString());
+		args.push("--batch-size", common.logicalBatchSize.toString());
+		args.push("--ubatch-size", common.physicalBatchSize.toString());
 		if (common.noMmap) {
 			args.push("--no-mmap");
 		}
@@ -219,6 +221,18 @@ export class LlamaServerRepository {
 		args.push("--parallel", common.parallel.toString());
 		args.push("--direct-io");
 
+		// Server-specific params
+		if (common.cachePrompt) {
+			args.push("--cache-prompt");
+			args.push("--cache-reuse", common.cacheReuse.toString());
+		}
+		if (common.kvUnified) {
+			args.push("--kv-unified");
+		}
+		if (sampling.continuousBatching) {
+			args.push("--cont-batching");
+		}
+
 		// sampling
 		args.push("--temp", sampling.temperature.toString());
 		args.push("--top-k", sampling.topK.toString());
@@ -226,7 +240,6 @@ export class LlamaServerRepository {
 		args.push("--min-p", sampling.minP.toString());
 		args.push("--repeat-penalty", sampling.repeatPenalty.toString());
 		args.push("--mirostat", sampling.mirostat.toString());
-		args.push("--cont-batching");
 		// Only for gpt-oss
 		if (sampling.reasoningEffort) {
 			args.push("--chat-template-kwargs");

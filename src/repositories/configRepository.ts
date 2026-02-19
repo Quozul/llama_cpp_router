@@ -46,6 +46,11 @@ const CommonSchema = z.object({
 	flashAttention: z.boolean().default(true),
 	jinja: z.boolean().default(true),
 	parallel: z.number().nonnegative().default(1),
+	logicalBatchSize: z.number().nonnegative().default(4096), // recommended: 4096, default: 2048
+	physicalBatchSize: z.number().nonnegative().default(1024), // recommended: 1024, default: 512
+	cachePrompt: z.boolean().default(true),
+	kvUnified: z.boolean().default(true),
+	cacheReuse: z.number().nonnegative().default(256), // recommended: 256, default: 0
 });
 
 const SamplingSchema = z.object({
@@ -56,6 +61,7 @@ const SamplingSchema = z.object({
 	repeatPenalty: z.number().positive().default(1.0),
 	mirostat: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(2),
 	reasoningEffort: z.enum(["low", "medium", "high"]).nullable().default(null),
+	continuousBatching: z.boolean().default(true),
 });
 
 const NetworkSchema = z.object({
