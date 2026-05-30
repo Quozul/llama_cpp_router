@@ -23,7 +23,8 @@
 				"noMmap": true,
 				"flashAttention": true,
 				"nGpuLayers": 99,
-				"threads": -1
+				"threads": -1,
+				"draftMtp": false
 			},
 			"sampling": {
 				"temperature": 0.8,
@@ -50,7 +51,8 @@
 				"noMmap": true,
 				"flashAttention": true,
 				"nGpuLayers": 99,
-				"threads": -1
+				"threads": -1,
+				"draftMtp": false
 			},
 			"sampling": {
 				"temperature": 0.8,

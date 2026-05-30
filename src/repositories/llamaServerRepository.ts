@@ -232,6 +232,10 @@ export class LlamaServerRepository {
 		if (sampling.continuousBatching) {
 			args.push("--cont-batching");
 		}
+		if (common.draftMtp) {
+			args.push("--spec-type", "draft-mtp");
+			args.push("--spec-draft-n-max", "2");
+		}
 
 		// sampling
 		args.push("--temp", sampling.temperature.toString());
