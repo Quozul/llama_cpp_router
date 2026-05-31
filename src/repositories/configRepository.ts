@@ -35,12 +35,13 @@ function parseKString(v: unknown): unknown {
 
 const ContextSizeSchema = z
 	.preprocess(parseKString, z.number().int().nonnegative())
-	.default(4096);
+	.default(131072);
 
 const CommonSchema = z.object({
 	cacheType: CacheTypeSchema.default("q8_0"),
 	contextSize: ContextSizeSchema,
 	threads: z.number().int().default(-1),
+	cacheRam: z.number().nonnegative().default(32768),
 	nGpuLayers: z.number().int().nonnegative().default(99),
 	noMmap: z.boolean().default(true),
 	flashAttention: z.boolean().default(true),
@@ -50,7 +51,7 @@ const CommonSchema = z.object({
 	physicalBatchSize: z.number().nonnegative().default(1024), // recommended: 1024, default: 512
 	cachePrompt: z.boolean().default(true),
 	kvUnified: z.boolean().default(true),
-	cacheReuse: z.number().nonnegative().default(256), // recommended: 256, default: 0
+	cacheReuse: z.number().nonnegative().default(1024), // recommended: 1024, default: 0
 	draftMtp: z.boolean().default(false),
 });
 
@@ -61,6 +62,7 @@ const SamplingSchema = z.object({
 	minP: z.number().min(0).max(1).default(0.1),
 	repeatPenalty: z.number().positive().default(1.0),
 	mirostat: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(2),
+	presencePenalty: z.number().default(0),
 	reasoningEffort: z.enum(["low", "medium", "high"]).nullable().default(null),
 	continuousBatching: z.boolean().default(true),
 });

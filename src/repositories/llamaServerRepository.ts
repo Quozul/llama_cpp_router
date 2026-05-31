@@ -206,6 +206,7 @@ export class LlamaServerRepository {
 		args.push("--cache-type-v", common.cacheType);
 		args.push("--cache-type-k", common.cacheType);
 		args.push("--ctx-size", common.contextSize.toString());
+		args.push("--cache-ram", common.cacheRam.toString());
 		args.push("--threads", common.threads.toString());
 		args.push("--n-gpu-layers", common.nGpuLayers.toString());
 		args.push("--batch-size", common.logicalBatchSize.toString());
@@ -243,6 +244,7 @@ export class LlamaServerRepository {
 		args.push("--top-p", sampling.topP.toString());
 		args.push("--min-p", sampling.minP.toString());
 		args.push("--repeat-penalty", sampling.repeatPenalty.toString());
+		args.push("--presence-penalty", sampling.presencePenalty.toString());
 		args.push("--mirostat", sampling.mirostat.toString());
 		// Only for gpt-oss
 		if (sampling.reasoningEffort) {
