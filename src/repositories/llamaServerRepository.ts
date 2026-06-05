@@ -123,6 +123,10 @@ export class LlamaServerRepository {
 
 		await readyPromise;
 
+		// Forward all subsequent logs to the console
+		child.stdout.on("data", (chunk) => process.stdout.write(chunk));
+		child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+
 		// Set up persistent crash handler
 		child.on("exit", (code, signal) => {
 			console.error(
