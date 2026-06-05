@@ -69,6 +69,7 @@ export class LlamaServerRepository {
 		const commandStr = `${this.#binaryPath} ${args
 			.map(this.#escapeArg)
 			.join(" ")}`;
+		console.log(commandStr);
 
 		const child: ChildProcessWithoutStdin = spawn(this.#binaryPath, args, {
 			stdio: ["ignore", "pipe", "pipe"],
@@ -91,7 +92,7 @@ export class LlamaServerRepository {
 				stdoutBuffer += chunk;
 				const lines = stdoutBuffer.split(/\r?\n/);
 				for (const line of lines) {
-					if (line.includes("main: server is listening on")) {
+					if (line.includes("server is listening on")) {
 						child.stdout.off("data", onData);
 						child.off("exit", onExit);
 						resolve();
@@ -122,10 +123,6 @@ export class LlamaServerRepository {
 		});
 
 		await readyPromise;
-
-		// Forward all subsequent logs to the console
-		child.stdout.on("data", (chunk) => process.stdout.write(chunk));
-		child.stderr.on("data", (chunk) => process.stderr.write(chunk));
 
 		// Set up persistent crash handler
 		child.on("exit", (code, signal) => {
