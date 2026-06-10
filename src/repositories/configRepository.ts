@@ -53,6 +53,7 @@ const CommonSchema = z.object({
 	kvUnified: z.boolean().default(true),
 	cacheReuse: z.number().nonnegative().default(1024), // recommended: 1024, default: 0
 	draftMtp: z.boolean().default(false),
+	draftModelPath: z.string().nullable().default(null),
 });
 
 const SamplingSchema = z.object({

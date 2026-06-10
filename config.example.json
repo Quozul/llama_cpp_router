@@ -24,7 +24,8 @@
 				"flashAttention": true,
 				"nGpuLayers": 99,
 				"threads": -1,
-				"draftMtp": false
+				"draftMtp": false,
+				"draftModelPath": null
 			},
 			"sampling": {
 				"temperature": 0.8,
@@ -52,7 +53,8 @@
 				"flashAttention": true,
 				"nGpuLayers": 99,
 				"threads": -1,
-				"draftMtp": false
+				"draftMtp": false,
+				"draftModelPath": null
 			},
 			"sampling": {
 				"temperature": 0.8,

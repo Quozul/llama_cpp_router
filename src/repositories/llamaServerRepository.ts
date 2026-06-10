@@ -238,6 +238,9 @@ export class LlamaServerRepository {
 			args.push("--spec-type", "draft-mtp");
 			args.push("--spec-draft-n-max", "2");
 		}
+		if (common.draftModelPath) {
+			args.push("--model-draft", common.draftModelPath);
+		}
 
 		// sampling
 		args.push("--temp", sampling.temperature.toString());
