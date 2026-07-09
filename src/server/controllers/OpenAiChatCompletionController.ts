@@ -2,6 +2,7 @@ import type { HttpBindings } from "@hono/node-server";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { stream } from "hono/streaming";
+import { hasModelField, isStreamRequest } from "#src/common/streamDetection.ts";
 import {
 	InsufficientMemoryError,
 	type LlamaProxyService,
@@ -16,19 +17,18 @@ export class OpenAiChatCompletionController {
 
 	async getOpenAiChatCompletions(c: Context<{ Bindings: HttpBindings }>) {
 		const request = await c.req.json();
-		if ("stream" in request && "model" in request) {
-			const model = request.model;
-			const isStreamingRequest = request.stream;
+		if (hasModelField(request)) {
+			const isStreamingRequest = isStreamRequest(request);
 			const abortController = new AbortController();
 			if (isStreamingRequest) {
-				return this.#stream(c, model, abortController, request);
+				return this.#stream(c, request.model, abortController, request);
 			} else {
 				c.header("Content-Type", "application/json");
 				c.env.outgoing.on("close", () => {
 					abortController.abort();
 				});
 				const response = await this.#proxy(
-					model,
+					request.model,
 					abortController.signal,
 					request,
 				);

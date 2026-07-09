@@ -5,7 +5,7 @@ import type { LlamaServerRepository } from "#src/repositories/llamaServerReposit
 import { LlamaProxyService } from "#src/services/llamaProxyService.ts";
 import type { ModelFitService } from "#src/services/modelFitService.ts";
 
-test("LlamaProxyService race condition reproduction", async (t) => {
+test("LlamaProxyService race condition reproduction", async () => {
 	// Arrange
 	const configRepository = {
 		getModelConfiguration: mock.fn(() => ({
@@ -50,7 +50,7 @@ test("LlamaProxyService race condition reproduction", async (t) => {
 
 		// Assert
 		const startCallCount = (
-			llamaServerRepository.start as any
+			llamaServerRepository.start as unknown
 		).mock.callCount();
 		assert.strictEqual(
 			startCallCount,
