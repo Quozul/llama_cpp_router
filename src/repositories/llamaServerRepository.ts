@@ -92,7 +92,7 @@ export class LlamaServerRepository {
 				stdoutBuffer += chunk;
 				const lines = stdoutBuffer.split(/\r?\n/);
 				for (const line of lines) {
-					if (line.includes("server is listening on")) {
+					if (line.includes("listening on")) {
 						child.stdout.off("data", onData);
 						child.off("exit", onExit);
 						resolve();
