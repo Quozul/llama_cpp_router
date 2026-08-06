@@ -8,9 +8,8 @@
 		"verbatimModuleSyntax": true,
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
-		"baseUrl": ".",
 		"paths": {
-			"#src/*": ["src/*"]
+			"#src/*": ["./src/*"]
 		}
 	}
 }
