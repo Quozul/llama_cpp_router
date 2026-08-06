@@ -24,7 +24,8 @@
 				"flashAttention": true,
 				"nGpuLayers": 99,
 				"threads": -1,
-				"draftMtp": false,
+				"specType": null,
+				"specDraftNMax": 2,
 				"draftModelPath": null
 			},
 			"sampling": {
@@ -53,7 +54,8 @@
 				"flashAttention": true,
 				"nGpuLayers": 99,
 				"threads": -1,
-				"draftMtp": false,
+				"specType": null,
+				"specDraftNMax": 2,
 				"draftModelPath": null
 			},
 			"sampling": {

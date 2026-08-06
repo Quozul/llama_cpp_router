@@ -21,7 +21,11 @@ export abstract class BaseCompletionController {
 
 	protected async handleCompletionRequest(
 		c: Context<{ Bindings: HttpBindings }>,
-		proxyCall: (model: string, signal: AbortSignal, payload: string) => Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null>,
+		proxyCall: (
+			model: string,
+			signal: AbortSignal,
+			payload: string,
+		) => Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null>,
 	) {
 		const request = await c.req.json();
 		if (hasModelField(request)) {
@@ -30,13 +34,24 @@ export abstract class BaseCompletionController {
 			const payload = JSON.stringify(request);
 
 			if (isStreamingRequest) {
-				return this.#stream(c, request.model, abortController, payload, proxyCall);
+				return this.#stream(
+					c,
+					request.model,
+					abortController,
+					payload,
+					proxyCall,
+				);
 			} else {
 				c.header("Content-Type", "application/json");
 				c.env.outgoing.on("close", () => {
 					abortController.abort();
 				});
-				const response = await this.#proxy(request.model, abortController.signal, payload, proxyCall);
+				const response = await this.#proxy(
+					request.model,
+					abortController.signal,
+					payload,
+					proxyCall,
+				);
 				return c.body(response);
 			}
 		}
@@ -47,10 +62,19 @@ export abstract class BaseCompletionController {
 		model: string,
 		abortController: AbortController,
 		payload: string,
-		proxyCall: (model: string, signal: AbortSignal, payload: string) => Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null>,
+		proxyCall: (
+			model: string,
+			signal: AbortSignal,
+			payload: string,
+		) => Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null>,
 	) {
 		try {
-			const response = await this.#proxy(model, abortController.signal, payload, proxyCall);
+			const response = await this.#proxy(
+				model,
+				abortController.signal,
+				payload,
+				proxyCall,
+			);
 
 			c.header("Content-Type", "text/event-stream");
 			return stream(c, async (stream) => {
@@ -77,7 +101,11 @@ export abstract class BaseCompletionController {
 		model: string,
 		abortSignal: AbortSignal,
 		payload: string,
-		proxyCall: (model: string, signal: AbortSignal, payload: string) => Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null>,
+		proxyCall: (
+			model: string,
+			signal: AbortSignal,
+			payload: string,
+		) => Promise<ReadableStream<Uint8Array<ArrayBuffer>> | null>,
 	): Promise<ReadableStream<Uint8Array<ArrayBuffer>>> {
 		const response = await proxyCall(model, abortSignal, payload);
 		if (!response) {

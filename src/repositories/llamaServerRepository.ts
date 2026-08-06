@@ -234,9 +234,9 @@ export class LlamaServerRepository {
 		if (sampling.continuousBatching) {
 			args.push("--cont-batching");
 		}
-		if (common.draftMtp) {
-			args.push("--spec-type", "draft-mtp");
-			args.push("--spec-draft-n-max", "2");
+		if (common.specType) {
+			args.push("--spec-type", common.specType);
+			args.push("--spec-draft-n-max", common.specDraftNMax.toString());
 		}
 		if (common.draftModelPath) {
 			args.push("--model-draft", common.draftModelPath);

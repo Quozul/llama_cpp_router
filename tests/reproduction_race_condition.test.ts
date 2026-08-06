@@ -16,7 +16,7 @@ test("LlamaProxyService race condition reproduction", async () => {
 		})),
 		getConcurrentModels: mock.fn(() => 5),
 		getModelUnloadDuration: mock.fn(() => 5),
-	} as unknown as ConfigRepository;
+	};
 
 	const llamaServerRepository = {
 		start: mock.fn(async () => {
@@ -25,16 +25,16 @@ test("LlamaProxyService race condition reproduction", async () => {
 		}),
 		onProcessCrash: mock.fn(),
 		stop: mock.fn(),
-	} as unknown as LlamaServerRepository;
+	};
 
 	const modelFitService = {
 		willModelFit: mock.fn(async () => ({ fits: true })),
-	} as unknown as ModelFitService;
+	};
 
 	const service = new LlamaProxyService(
-		configRepository,
-		llamaServerRepository,
-		modelFitService,
+		configRepository as unknown as ConfigRepository,
+		llamaServerRepository as unknown as LlamaServerRepository,
+		modelFitService as unknown as ModelFitService,
 	);
 
 	// Mock global fetch to avoid actual network calls
@@ -49,9 +49,7 @@ test("LlamaProxyService race condition reproduction", async () => {
 		await Promise.all([req1, req2]);
 
 		// Assert
-		const startCallCount = (
-			llamaServerRepository.start as unknown
-		).mock.callCount();
+		const startCallCount = llamaServerRepository.start.mock.callCount();
 		assert.strictEqual(
 			startCallCount,
 			1,

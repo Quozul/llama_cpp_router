@@ -52,7 +52,8 @@ const CommonSchema = z.object({
 	cachePrompt: z.boolean().default(true),
 	kvUnified: z.boolean().default(true),
 	cacheReuse: z.number().nonnegative().default(1024), // recommended: 1024, default: 0
-	draftMtp: z.boolean().default(false),
+	specType: z.enum(["draft-mtp", "draft-dspark"]).nullable().default(null),
+	specDraftNMax: z.number().int().positive().default(2),
 	draftModelPath: z.string().nullable().default(null),
 });
 
