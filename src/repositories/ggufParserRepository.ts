@@ -82,6 +82,7 @@ export class GgufParserRepository extends BaseCliCommandRepository {
 	): Promise<GgufParserJson> {
 		const args = this.#buildArgs(params);
 		const commandStr = `${this.binaryPath} ${args.map(this.escapeArg).join(" ")}`;
+		console.log(commandStr);
 
 		const { stdout, stderr, exitCode } = await this.spawnAsync(args);
 

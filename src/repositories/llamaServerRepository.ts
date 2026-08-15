@@ -212,16 +212,13 @@ export class LlamaServerRepository {
 		args.push("--n-gpu-layers", common.nGpuLayers.toString());
 		args.push("--batch-size", common.logicalBatchSize.toString());
 		args.push("--ubatch-size", common.physicalBatchSize.toString());
-		if (common.noMmap) {
-			args.push("--no-mmap");
-		}
+		args.push("--load-mode", "dio");
 		if (common.jinja) {
 			args.push("--jinja");
 		} else {
 			args.push("--no-jinja");
 		}
 		args.push("--parallel", common.parallel.toString());
-		args.push("--direct-io");
 
 		// Server-specific params
 		if (common.cachePrompt) {

@@ -56,6 +56,7 @@ export class RocmSmiRepository
 	): Promise<RocmSmiVramInfo[]> {
 		const args = this.#buildArgs(opts);
 		const commandStr = `${this.binaryPath} ${args.map(this.escapeArg).join(" ")}`;
+		console.log(commandStr);
 
 		const { stdout, stderr, exitCode } = await this.spawnAsync(args);
 

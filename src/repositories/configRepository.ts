@@ -43,7 +43,6 @@ const CommonSchema = z.object({
 	threads: z.number().int().default(-1),
 	cacheRam: z.number().nonnegative().default(32768),
 	nGpuLayers: z.number().int().nonnegative().default(99),
-	noMmap: z.boolean().default(true),
 	flashAttention: z.boolean().default(true),
 	jinja: z.boolean().default(true),
 	parallel: z.number().nonnegative().default(1),

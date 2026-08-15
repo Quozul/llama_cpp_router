@@ -112,7 +112,7 @@ export class ModelFitService {
 			);
 		}
 
-		return firstVramInfo.nonuma;
+		return firstVramInfo.uma;
 	}
 
 	async #getFreeVram(): Promise<number> {
