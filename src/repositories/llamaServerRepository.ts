@@ -218,6 +218,18 @@ export class LlamaServerRepository {
 		} else {
 			args.push("--no-jinja");
 		}
+		if (common.chatTemplateFile) {
+			args.push("--chat-template-file", common.chatTemplateFile);
+		}
+		if (common.reasoningFormat) {
+			args.push("--reasoning-format", common.reasoningFormat);
+		}
+		// null = leave it up to the chat template default
+		if (common.reasoningPreserve === true) {
+			args.push("--reasoning-preserve");
+		} else if (common.reasoningPreserve === false) {
+			args.push("--no-reasoning-preserve");
+		}
 		args.push("--parallel", common.parallel.toString());
 
 		// Server-specific params
@@ -247,14 +259,11 @@ export class LlamaServerRepository {
 		args.push("--repeat-penalty", sampling.repeatPenalty.toString());
 		args.push("--presence-penalty", sampling.presencePenalty.toString());
 		args.push("--mirostat", sampling.mirostat.toString());
-		// Only for gpt-oss
-		if (sampling.reasoningEffort) {
+
+		// Custom chat template arguments (e.g. {"enable_thinking": true, "reasoning_effort": "medium"})
+		if (Object.keys(common.chatTemplateKwargs).length > 0) {
 			args.push("--chat-template-kwargs");
-			args.push(
-				JSON.stringify({
-					reasoning_effort: sampling.reasoningEffort.toString(),
-				}),
-			);
+			args.push(JSON.stringify(common.chatTemplateKwargs));
 		}
 
 		return args;

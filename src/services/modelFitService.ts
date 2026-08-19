@@ -77,7 +77,8 @@ export class ModelFitService {
 			modelFilePath: modelConfig.modelFilePath,
 			mmprojFilePath: modelConfig.multimodalProjectorFilePath,
 			contextSize: modelConfig.common.contextSize,
-			noMmap: modelConfig.common.noMmap,
+			// llama-server always loads with --load-mode dio (no mmap)
+			noMmap: true,
 			flashAttention: modelConfig.common.flashAttention,
 			cacheTypeK: modelConfig.common.cacheType,
 			cacheTypeV: modelConfig.common.cacheType,

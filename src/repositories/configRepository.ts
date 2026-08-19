@@ -37,27 +37,55 @@ const ContextSizeSchema = z
 	.preprocess(parseKString, z.number().int().nonnegative())
 	.default(131072);
 
-const CommonSchema = z.object({
-	cacheType: CacheTypeSchema.default("q8_0"),
-	contextSize: ContextSizeSchema,
-	threads: z.number().int().default(-1),
-	cacheRam: z.number().nonnegative().default(32768),
-	nGpuLayers: z.number().int().nonnegative().default(99),
-	flashAttention: z.boolean().default(true),
-	jinja: z.boolean().default(true),
-	parallel: z.number().nonnegative().default(1),
-	logicalBatchSize: z.number().nonnegative().default(4096), // recommended: 4096, default: 2048
-	physicalBatchSize: z.number().nonnegative().default(1024), // recommended: 1024, default: 512
-	cachePrompt: z.boolean().default(true),
-	kvUnified: z.boolean().default(true),
-	cacheReuse: z.number().nonnegative().default(1024), // recommended: 1024, default: 0
-	specType: z
-		.enum(["draft-mtp", "draft-dspark", "draft-dflash"])
-		.nullable()
-		.default(null),
-	specDraftNMax: z.number().int().positive().default(2),
-	draftModelPath: z.string().nullable().default(null),
-});
+/**
+ * Custom arguments passed to the Jinja chat template via
+ * `--chat-template-kwargs` (e.g. `enable_thinking`, `reasoning_effort`).
+ */
+const ChatTemplateKwargsSchema = z
+	.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+	.default({});
+
+const CommonSchema = z
+	.object({
+		cacheType: CacheTypeSchema.default("q8_0"),
+		contextSize: ContextSizeSchema,
+		threads: z.number().int().default(-1),
+		cacheRam: z.number().nonnegative().default(32768),
+		nGpuLayers: z.number().int().nonnegative().default(99),
+		flashAttention: z.boolean().default(true),
+		jinja: z.boolean().default(true),
+		// Custom Jinja chat template (`--chat-template-file`), requires jinja
+		chatTemplateFile: z.string().min(1).nullable().default(null),
+		// Reasoning format (`--reasoning-format`), e.g. "deepseek", "qwen"
+		reasoningFormat: z.string().min(1).nullable().default(null),
+		// Preserve reasoning trace in the full history
+		// (`--reasoning-preserve` / `--no-reasoning-preserve`),
+		// null = let the chat template decide
+		reasoningPreserve: z.boolean().nullable().default(null),
+		// Extra chat template arguments (`--chat-template-kwargs`)
+		chatTemplateKwargs: ChatTemplateKwargsSchema,
+		parallel: z.number().nonnegative().default(1),
+		logicalBatchSize: z.number().nonnegative().default(4096), // recommended: 4096, default: 2048
+		physicalBatchSize: z.number().nonnegative().default(1024), // recommended: 1024, default: 512
+		cachePrompt: z.boolean().default(true),
+		kvUnified: z.boolean().default(true),
+		cacheReuse: z.number().nonnegative().default(1024), // recommended: 1024, default: 0
+		specType: z
+			.enum(["draft-mtp", "draft-dspark", "draft-dflash"])
+			.nullable()
+			.default(null),
+		specDraftNMax: z.number().int().positive().default(2),
+		draftModelPath: z.string().nullable().default(null),
+	})
+	.superRefine((data, ctx) => {
+		if (data.chatTemplateFile !== null && !data.jinja) {
+			ctx.addIssue({
+				code: ZodIssueCode.custom,
+				message: `A custom chat template (chatTemplateFile) requires jinja to be enabled`,
+				path: ["chatTemplateFile"],
+			});
+		}
+	});
 
 const SamplingSchema = z.object({
 	temperature: z.number().min(0).default(0.8),
@@ -67,7 +95,6 @@ const SamplingSchema = z.object({
 	repeatPenalty: z.number().positive().default(1.0),
 	mirostat: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(2),
 	presencePenalty: z.number().default(0),
-	reasoningEffort: z.enum(["low", "medium", "high"]).nullable().default(null),
 	continuousBatching: z.boolean().default(true),
 });
 
