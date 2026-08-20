@@ -231,6 +231,7 @@ export class LlamaServerRepository {
 			args.push("--no-reasoning-preserve");
 		}
 		args.push("--parallel", common.parallel.toString());
+		args.push("--no-cache-idle-slots");
 
 		// Server-specific params
 		if (common.cachePrompt) {
